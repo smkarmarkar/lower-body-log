@@ -150,7 +150,9 @@ button{font:inherit;color:inherit}
 .ref b{color:var(--ink);font-weight:600}
 .topright{display:flex;align-items:center;gap:6px}
 .fab{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--danger);display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;z-index:15}
-.fab svg{width:22px;height:22px}
+.fab{touch-action:none;user-select:none;-webkit-user-select:none;transition:left .2s,right .2s,top .2s}
+.fab.drag{transition:none;transform:scale(1.12);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.fab svg{width:22px;height:22px;pointer-events:none}
 .fab .n{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--danger);color:#fff;font:700 11px/20px var(--font-body);text-align:center;padding:0 5px}
 .sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;background:var(--panel);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;max-width:560px;margin:0 auto}
@@ -199,7 +201,7 @@ var PROGRAM = {
 var SUPERSET_REST = 120;
 /* ===================== /PROGRAM ===================== */
 
-var APP_VERSION = '2';
+var APP_VERSION = '3';
 /* Secret Gist that holds history.json and feedback.json. The token that writes it lives only on the phone. */
 var GIST_ID = 'e907ba07cdb5d1fbf3337d16a64528ba';
 var FAST = /[?#&]fast/.test(location.href);   // add #fast to test with 5s rests
@@ -726,8 +728,48 @@ var tT = null;
 function toast(msg){ var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(tT); tT = setTimeout(function(){ t.hidden = true; }, 2200); }
 
 /* ===================== EVENTS ===================== */
+/* Bug button: drag it anywhere; it snaps to the nearest side and remembers where it was. */
+var FAB_POS = lsGet('lbl.fabpos', null), fabDragged = false;
+function placeFab(){
+  var b = $('fab'); if (!FAB_POS) return;
+  var top = Math.min(Math.max(FAB_POS.y * innerHeight, 8), innerHeight - 56);
+  b.style.top = top + 'px'; b.style.bottom = 'auto';
+  if (FAB_POS.side === 'left'){ b.style.left = 'max(12px, env(safe-area-inset-left, 0px))'; b.style.right = 'auto'; }
+  else { b.style.right = 'max(12px, env(safe-area-inset-right, 0px))'; b.style.left = 'auto'; }
+}
+(function(){
+  var b = $('fab'), start = null;
+  b.addEventListener('pointerdown', function(e){
+    var r = b.getBoundingClientRect();
+    start = { x: e.clientX, y: e.clientY, dx: e.clientX - r.left, dy: e.clientY - r.top, moved: false };
+    try { b.setPointerCapture(e.pointerId); } catch(err){}
+  });
+  b.addEventListener('pointermove', function(e){
+    if (!start) return;
+    if (!start.moved && Math.abs(e.clientX - start.x) + Math.abs(e.clientY - start.y) < 8) return;
+    start.moved = true; b.classList.add('drag');
+    b.style.left = Math.min(Math.max(e.clientX - start.dx, 0), innerWidth - 48) + 'px';
+    b.style.top = Math.min(Math.max(e.clientY - start.dy, 0), innerHeight - 48) + 'px';
+    b.style.right = 'auto'; b.style.bottom = 'auto';
+  });
+  var end = function(e){
+    if (!start) return;
+    if (start.moved){
+      var r = b.getBoundingClientRect();
+      FAB_POS = { side: r.left + 24 < innerWidth / 2 ? 'left' : 'right', y: r.top / innerHeight };
+      lsSet('lbl.fabpos', FAB_POS); b.classList.remove('drag'); placeFab();
+      fabDragged = true; setTimeout(function(){ fabDragged = false; }, 50);
+    }
+    start = null;
+  };
+  b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+  window.addEventListener('resize', placeFab);
+  placeFab();
+})();
+
 document.addEventListener('click', function(e){
   var el = e.target.closest('[data-act]'); if (!el) return;
+  if (el.id === 'fab' && fabDragged) return;
   unlockAudio();
   var a = el.getAttribute('data-act');
   var go = function(v){ S.view = v; S.confirm = false; S.confirmDel = false; S.editing = false; render(); scrollTo(0, 0); };
