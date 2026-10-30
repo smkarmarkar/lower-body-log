@@ -165,6 +165,23 @@ button{font:inherit;color:inherit}
 .steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--soft)}
 .sync{font-size:13px;color:var(--soft)}
 .sync.bad{color:var(--danger)}
+.seg{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.seg button{flex:none;border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;cursor:pointer;color:var(--soft)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.notecard{gap:10px}
+.nhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.st-open{color:var(--soft)}
+.st-approved{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.st-fixed{color:var(--good);border-color:color-mix(in srgb,var(--good) 45%,var(--line))}
+.st-done,.st-wontfix{color:var(--soft)}
+.ntext{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.thread{display:flex;flex-direction:column;gap:6px;border-left:3px solid var(--line);padding-left:10px}
+.thread .by{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--soft)}
+.thread .claude .by{color:var(--accent)}
+.nactions{display:flex;gap:8px;flex-wrap:wrap}
+.nactions .btn{min-height:42px;font-size:15px;padding:0 16px}
+textarea.field{min-height:96px;resize:vertical}
+.callout{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:var(--r-md);padding:12px 14px;font-size:14.5px}
 @media (max-width:360px){.card{padding:14px}.sets input{font-size:18px;padding:0 8px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -201,9 +218,11 @@ var PROGRAM = {
 var SUPERSET_REST = 120;
 /* ===================== /PROGRAM ===================== */
 
-var APP_VERSION = '3';
-/* Secret Gist that holds history.json and feedback.json. The token that writes it lives only on the phone. */
-var GIST_ID = 'e907ba07cdb5d1fbf3337d16a64528ba';
+var APP_VERSION = '4';
+/* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
+   so its id never appears in this public page. */
+var GIST_DESC = 'Lower Body Log private data';
+var GIST_ID = (function(){ try { return JSON.parse(localStorage.getItem('lbl.gist')) || ''; } catch(e){ return ''; } })();
 var FAST = /[?#&]fast/.test(location.href);   // add #fast to test with 5s rests
 var IN_ARTIFACT = !!window.claude;             // claude.ai pages cannot embed YouTube, so link out there
 var $ = function(id){ return document.getElementById(id); };
@@ -281,8 +300,18 @@ function mergeList(local, remote, keyTime){
   local.forEach(function(l){ if (!ids[l.id] || (l[keyTime] || 0) > (ids[l.id][keyTime] || 0)) extra = true; });
   return { list: Object.keys(map).map(function(k){ return map[k]; }), extra: extra };
 }
+function findGist(){
+  return fetch('https://api.github.com/gists?per_page=100', { headers: gistHeaders(), cache: 'no-store' }).then(function(r){ if (!r.ok) throw r.status; return r.json(); }).then(function(list){
+    var g = list.filter(function(x){ return x.description === GIST_DESC; })[0];
+    if (g) return g.id;
+    return fetch('https://api.github.com/gists', { method: 'POST', headers: gistHeaders(true), body: JSON.stringify({ description: GIST_DESC, public: false,
+      files: { 'history.json': { content: '[]' }, 'feedback.json': { content: '[]' } } }) }).then(function(r){ if (!r.ok) throw r.status; return r.json(); }).then(function(g){ return g.id; });
+  }).then(function(id){ GIST_ID = id; lsSet('lbl.gist', id); return id; });
+}
 function gistPull(){
-  if (!GIST_ID) return Promise.resolve();
+  if (!TOKEN) return Promise.resolve();
+  if (!GIST_ID){ SYNC.state = 'syncing'; updSync();
+    return findGist().then(gistPull, function(e){ SYNC.state = (e === 401 || e === 403 || e === 404) ? 'auth' : 'offline'; updSync(); }); }
   SYNC.state = 'syncing'; updSync();
   return fetch(GIST_API(), { headers: gistHeaders(), cache: 'no-store' }).then(function(r){ if (!r.ok) throw r.status; return r.json(); }).then(function(g){
     var get = function(name){ var f = g.files && g.files[name]; if (!f) return Promise.resolve([]);
@@ -314,7 +343,6 @@ function gistPush(){
   }).catch(function(e){ SYNC.state = (e === 401 || e === 403 || e === 404) ? 'auth' : 'offline'; updSync(); });
 }
 function syncText(){
-  if (!GIST_ID) return 'Saved on this phone';
   if (!TOKEN) return 'Saved on this phone. Add your token in Settings to back up and send notes.';
   if (SYNC.state === 'syncing') return 'Syncing…';
   if (SYNC.state === 'auth') return 'GitHub refused the token. Check it in Settings.';
@@ -512,7 +540,7 @@ function videoBlock(it){
 
 function viewHome(){
   var h = '<div class="top"><div><div class="eyebrow">Strength</div><h1>Lower Body Log</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
-    '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="history">History</button><button class="link" data-act="settings">Settings and notes</button></div>';
+    '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="history">History</button><button class="link" data-act="notes">Notes' + (notesBadge() ? ' (' + notesBadge() + ')' : '') + '</button><button class="link" data-act="settings">Settings</button></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
     h += '<button class="banner" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button>';
@@ -651,16 +679,23 @@ function ctxNow(){
   return c;
 }
 function ctxText(c){
-  var v = { home: 'Home', day: 'Exercise list', focus: 'Workout', summary: 'Summary', history: 'History', settings: 'Settings' }[c.view] || c.view;
+  var v = { home: 'Home', day: 'Exercise list', focus: 'Workout', summary: 'Summary', history: 'History', settings: 'Settings', notes: 'Notes' }[c.view] || c.view;
   return [v, c.workout, c.exercise, c.set ? 'set ' + c.set : '', c.phase].filter(Boolean).join(' · ');
 }
 function viewSheet(){
   return '<div class="sheetbg" data-act="fbclose"></div><div class="sheet" role="dialog" aria-label="Note for Claude"><h3>Note for Claude</h3>' +
     '<div class="ctx">Screen: ' + esc(ctxText(S.fbctx)) + '</div>' +
     '<textarea id="fbtext" placeholder="What went wrong or what should change?"></textarea>' +
-    '<div class="row"><button class="btn primary" data-act="fbsave">Save note</button><button class="btn" data-act="fbclose">Cancel</button></div></div>';
+    '<div class="row"><button class="btn primary" data-act="fbsave">Save note</button><button class="btn" data-act="fbclose">Cancel</button></div>' +
+    '<button class="link" data-act="fbsee" style="align-self:flex-start">See all notes</button></div>';
 }
-function openNotes(){ return FEEDBACK.filter(function(f){ return f.status !== 'fixed' && !f.deleted; }); }
+function liveNotes(){ return FEEDBACK.filter(function(f){ return !f.deleted; }); }
+function openNotes(){ return liveNotes().filter(function(f){ return f.status === 'open' || f.status === 'approved' || !f.status; }); }
+function notesBadge(){ return liveNotes().filter(function(f){ return f.status === 'open' || f.status === 'fixed' || !f.status; }).length; }
+function noteById(id){ return FEEDBACK.filter(function(f){ return f.id === id; })[0]; }
+function touchNote(f){ f.updated = Date.now(); lsSet('lbl.feedback', FEEDBACK); schedulePush(); }
+function addThread(f, by, text){ f.thread = f.thread || []; f.thread.push({ by: by, at: Date.now(), text: text }); }
+var STATUS_LABEL = { open: 'Open', approved: 'Approved for Claude', fixed: 'Fixed, check it', done: 'Done', wontfix: 'Not changed' };
 function updFab(){ var n = openNotes().length, b = $('fabn'); b.hidden = !n; b.textContent = n; $('fab').hidden = !$('sheet').hidden; }
 function viewSettings(){
   var h = topBar('Settings', 'home', refreshBtn());
@@ -672,21 +707,53 @@ function viewSettings(){
     '<input id="tok" class="field" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub token">' +
     '<button class="btn primary" data-act="toksave">Save token</button>';
   h += '</section>';
-  var notes = FEEDBACK.filter(function(f){ return !f.deleted; });
-  h += '<section class="card"><div><h3>Notes for Claude</h3><span class="muted" style="font-size:14px">Use the bug button on any screen. ' + (TOKEN ? 'Notes sync to your Gist; tell Claude "fix feedback" after your session.' : 'Without a token, copy them and paste into your chat with Claude.') + '</span></div>';
-  if (!notes.length) h += '<span class="muted">No notes yet.</span>';
-  notes.forEach(function(f){
-    h += '<div class="fbitem' + (f.status === 'fixed' ? ' fixed' : '') + '"><span class="ref">' + fmtDate(f.at) + ' ' + fmtTime(f.at) + ' · ' + esc(ctxText(f.ctx || {})) + (f.status === 'fixed' ? ' · fixed' : '') + '</span><span>' + esc(f.text) + '</span>' +
-      (f.reply ? '<span class="ref">Claude: ' + esc(f.reply) + '</span>' : '') + '</div>';
-  });
-  if (notes.length) h += '<button class="btn" data-act="fbcopy">Copy all notes</button>';
-  h += '</section><div class="note">Version ' + APP_VERSION + '</div>';
+  h += '<section class="card"><div><h3>Notes for Claude</h3><span class="muted" style="font-size:14px">Review, edit and approve your notes on the Notes screen.</span></div><button class="btn" data-act="notes">Open notes</button></section>';
+  h += '<div class="note">Version ' + APP_VERSION + '</div>';
+  return h;
+}
+
+/* Notes: review, edit, approve for Claude, check fixes, reopen */
+function noteCard(f){
+  var st = f.status || 'open', id = esc(f.id);
+  var h = '<article class="card notecard"><div class="nhead"><span class="chip st-' + st + '">' + STATUS_LABEL[st] + '</span><span class="ref">' + fmtDate(f.at) + ' ' + fmtTime(f.at) + '</span></div>' +
+    '<span class="ref">' + esc(ctxText(f.ctx || {})) + '</span>';
+  if (S.ned === f.id) h += '<textarea id="ned" class="field" aria-label="Edit note">' + esc(f.text) + '</textarea><div class="nactions"><button class="btn primary" data-act="nsave" data-id="' + id + '">Save</button><button class="btn" data-act="ncancel">Cancel</button></div>';
+  else h += '<p class="ntext">' + esc(f.text) + '</p>';
+  if (f.thread && f.thread.length) h += '<div class="thread">' + f.thread.map(function(t){
+    return '<div class="' + (t.by === 'claude' ? 'claude' : 'you') + '"><div class="by">' + (t.by === 'claude' ? 'Claude' : 'You') + ' · ' + fmtDate(t.at) + '</div><div class="ntext">' + esc(t.text) + '</div></div>'; }).join('') + '</div>';
+  if (S.nre === f.id) return h + '<textarea id="nre" class="field" placeholder="What still needs to change?" aria-label="Comment"></textarea><div class="nactions"><button class="btn primary" data-act="nresend" data-id="' + id + '">Send back to Claude</button><button class="btn" data-act="ncancel">Cancel</button></div></article>';
+  if (S.ndel === f.id) return h + '<div class="nactions"><span class="muted" style="align-self:center">Delete this note?</span><button class="btn danger" data-act="ndelyes" data-id="' + id + '">Delete</button><button class="btn" data-act="ncancel">Keep</button></div></article>';
+  if (S.ned === f.id) return h + '</article>';
+  var b = [];
+  if (st === 'open') b.push('<button class="btn primary" data-act="napprove" data-id="' + id + '">Approve for Claude</button>', '<button class="btn" data-act="nedit" data-id="' + id + '">Edit</button>');
+  if (st === 'approved') b.push('<button class="btn" data-act="nunapprove" data-id="' + id + '">Undo approval</button>', '<button class="btn" data-act="nedit" data-id="' + id + '">Edit</button>');
+  if (st === 'fixed' || st === 'wontfix') b.push('<button class="btn good" data-act="ndone" data-id="' + id + '">Looks good</button>', '<button class="btn" data-act="nreopen" data-id="' + id + '">Reopen</button>');
+  if (st === 'done') b.push('<button class="btn" data-act="nreopen" data-id="' + id + '">Reopen</button>');
+  if (st !== 'approved') b.push('<button class="link" data-act="ndel" data-id="' + id + '" style="color:var(--danger)">Delete</button>');
+  return h + '<div class="nactions">' + b.join('') + '</div></article>';
+}
+function viewNotes(){
+  var all = liveNotes(), by = function(st){ return all.filter(function(f){ return (f.status || 'open') === st || (st === 'closed' && (f.status === 'done' || f.status === 'wontfix')); }); };
+  var counts = { open: by('open').length, approved: by('approved').length, fixed: by('fixed').length, closed: by('closed').length };
+  if (!S.nf) S.nf = counts.fixed ? 'fixed' : counts.open ? 'open' : counts.approved ? 'approved' : 'open';
+  var h = topBar('Notes for Claude', 'home', refreshBtn());
+  h += '<div class="seg" role="group" aria-label="Filter notes">' + [['open', 'Open'], ['approved', 'Approved'], ['fixed', 'To check'], ['closed', 'Closed']].map(function(x){
+    return '<button data-act="nfilter" data-f="' + x[0] + '" aria-pressed="' + (S.nf === x[0]) + '">' + x[1] + ' ' + counts[x[0]] + '</button>'; }).join('') + '</div>';
+  if (counts.approved) h += '<div class="callout"><b>' + counts.approved + ' approved.</b> When you\'re ready, send Claude <b>"fix feedback"</b> from the Claude app. Fixes come back here under To check.</div>';
+  if (!TOKEN) h += '<div class="callout">Notes stay on this phone until you add your GitHub token in Settings. Without it, Claude can\'t see them.</div>';
+  if (S.nf === 'open'){
+    h += '<div class="nactions"><button class="btn" data-act="nnew">Add a note</button>' + (counts.open ? '<button class="btn primary" data-act="napproveall">Approve all ' + counts.open + '</button>' : '') + '</div>';
+  }
+  var list = by(S.nf);
+  if (!list.length) h += '<div class="card"><span class="muted">' + { open: 'No open notes. Use the bug button on any screen, or Add a note.', approved: 'Nothing waiting for Claude.', fixed: 'Nothing to check right now.', closed: 'No closed notes yet.' }[S.nf] + '</span></div>';
+  list.forEach(function(f){ h += noteCard(f); });
+  if (all.length) h += '<button class="link" data-act="fbcopy" style="align-self:center">Copy open notes as text</button>';
   return h;
 }
 
 function render(){
   if (S.view === 'focus' && !W) S.view = 'home';
-  var v = { home: viewHome, day: viewDay, focus: viewFocus, summary: viewSummary, history: viewHistory, settings: viewSettings }[S.view]();
+  var v = { home: viewHome, day: viewDay, focus: viewFocus, summary: viewSummary, history: viewHistory, settings: viewSettings, notes: viewNotes }[S.view]();
   $('app').innerHTML = v;
   updFab();
   tick();
@@ -777,6 +844,27 @@ document.addEventListener('click', function(e){
     case 'home': unwake(); go('home'); break;
     case 'history': go('history'); break;
     case 'settings': go('settings'); break;
+    case 'notes': S.ned = S.nre = S.ndel = null; go('notes'); break;
+    case 'fbsee': $('sheet').hidden = true; $('sheet').innerHTML = ''; S.ned = S.nre = S.ndel = null; go('notes'); break;
+    case 'nfilter': S.nf = el.getAttribute('data-f'); S.ned = S.nre = S.ndel = null; render(); break;
+    case 'nnew': S.fbctx = { view: 'notes', app: APP_VERSION, screen: innerWidth + 'x' + innerHeight }; $('sheet').innerHTML = viewSheet(); $('sheet').hidden = false; updFab(); setTimeout(function(){ $('fbtext').focus(); }, 50); break;
+    case 'nedit': S.ned = el.getAttribute('data-id'); S.nre = S.ndel = null; render(); setTimeout(function(){ var t = $('ned'); if (t) t.focus(); }, 30); break;
+    case 'ncancel': S.ned = S.nre = S.ndel = null; render(); break;
+    case 'nsave': var nf = noteById(el.getAttribute('data-id')), nt = ($('ned').value || '').trim();
+      if (!nt) { toast('A note can\'t be empty'); break; }
+      if (nf){ nf.text = nt; touchNote(nf); } S.ned = null; render(); toast('Note updated'); break;
+    case 'napprove': var na = noteById(el.getAttribute('data-id')); if (na){ na.status = 'approved'; na.approvedAt = Date.now(); touchNote(na); } render(); toast('Approved for Claude'); break;
+    case 'napproveall': liveNotes().forEach(function(f){ if ((f.status || 'open') === 'open'){ f.status = 'approved'; f.approvedAt = Date.now(); f.updated = Date.now(); } });
+      lsSet('lbl.feedback', FEEDBACK); schedulePush(); S.nf = 'approved'; render(); toast('All open notes approved'); break;
+    case 'nunapprove': var nu = noteById(el.getAttribute('data-id')); if (nu){ nu.status = 'open'; delete nu.approvedAt; touchNote(nu); } render(); break;
+    case 'ndone': var nd = noteById(el.getAttribute('data-id')); if (nd){ nd.status = 'done'; touchNote(nd); } render(); toast('Marked done'); break;
+    case 'nreopen': S.nre = el.getAttribute('data-id'); S.ned = S.ndel = null; render(); setTimeout(function(){ var t = $('nre'); if (t) t.focus(); }, 30); break;
+    case 'nresend': var nr = noteById(el.getAttribute('data-id')), rt = ($('nre').value || '').trim();
+      if (!rt) { toast('Say what still needs to change'); break; }
+      if (nr){ addThread(nr, 'you', rt); nr.status = 'approved'; nr.approvedAt = Date.now(); touchNote(nr); }
+      S.nre = null; S.nf = 'approved'; render(); toast('Sent back to Claude'); break;
+    case 'ndel': S.ndel = el.getAttribute('data-id'); S.ned = S.nre = null; render(); break;
+    case 'ndelyes': var nx = noteById(el.getAttribute('data-id')); if (nx){ nx.deleted = true; touchNote(nx); } S.ndel = null; render(); toast('Note deleted'); break;
     case 'refresh':
       toast('Refreshing…'); saveActive();
       var reload = function(){ location.replace(location.pathname + '?r=' + Date.now() + location.hash); };
@@ -785,7 +873,7 @@ document.addEventListener('click', function(e){
     case 'toksave': var tv = ($('tok').value || '').trim(); if (!tv) { toast('Paste the token first'); break; }
       TOKEN = tv; lsSet('lbl.token', TOKEN); SYNC.pulled = false; render();
       gistPull().then(function(){ if (SYNC.state === 'ok'){ toast('Connected to your Gist'); gistPush(); } else toast(syncText()); render(); }); break;
-    case 'tokdel': TOKEN = ''; lsSet('lbl.token', null); SYNC.state = ''; render(); toast('Token removed from this phone'); break;
+    case 'tokdel': TOKEN = ''; lsSet('lbl.token', null); GIST_ID = ''; lsSet('lbl.gist', null); SYNC.state = ''; render(); toast('Token removed from this phone'); break;
     case 'fbopen': S.fbctx = ctxNow(); $('sheet').innerHTML = viewSheet(); $('sheet').hidden = false; updFab(); setTimeout(function(){ $('fbtext').focus(); }, 50); break;
     case 'fbclose': $('sheet').hidden = true; $('sheet').innerHTML = ''; updFab(); break;
     case 'fbsave': var ft = ($('fbtext').value || '').trim(); if (!ft) { toast('Type a note first'); break; }
@@ -793,9 +881,9 @@ document.addEventListener('click', function(e){
       lsSet('lbl.feedback', FEEDBACK); schedulePush();
       $('sheet').hidden = true; $('sheet').innerHTML = ''; updFab();
       toast(TOKEN && GIST_ID ? 'Note saved for Claude' : 'Note saved on this phone');
-      if (S.view === 'settings') render(); break;
+      if (S.view === 'notes' || S.view === 'home') render(); break;
     case 'fbcopy':
-      var all = FEEDBACK.filter(function(f){ return !f.deleted && f.status !== 'fixed'; }).map(function(f){ return '- [' + fmtDate(f.at) + ' ' + fmtTime(f.at) + ' · ' + ctxText(f.ctx || {}) + '] ' + f.text; }).join('\n');
+      var all = openNotes().map(function(f){ return '- [' + fmtDate(f.at) + ' ' + fmtTime(f.at) + ' · ' + ctxText(f.ctx || {}) + '] ' + f.text; }).join('\n');
       try { navigator.clipboard.writeText('Feedback on Lower Body Log:\n' + all).then(function(){ toast('Notes copied'); }, function(){ toast('Could not copy here'); }); } catch(err){ toast('Could not copy here'); }
       break;
     case 'edit': S.rec = JSON.parse(JSON.stringify(S.rec)); S.editing = true; render(); break;
