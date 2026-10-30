@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Lower Log">
+<meta name="theme-color" content="#eef0f3">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
+</head>
+<body>
+<title>Lower Body Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* ===================== THEME =====================
+   Swap this block (and the VIEW templates in the script) to apply an external UI guideline.
+   Layout: single column, phone first; one focus card per exercise, sticky action bar at the bottom. */
+:root{
+  --bg:#eef0f3; --panel:#ffffff; --ink:#14171c; --soft:#5b6270; --line:#d9dde3; --field:#f7f8fa;
+  --accent:#1d5bd0; --accent-ink:#ffffff; --good:#2b7a4b; --rest:#c9930a; --danger:#b3362f;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"Figtree",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --r-sm:10px; --r-md:14px; --r-lg:22px; --tap:52px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1013; --panel:#171a1f; --ink:#eceef1; --soft:#9aa2ae; --line:#2a2f37; --field:#1f2329;
+  --accent:#5c8ef0; --accent-ink:#0b1220; --good:#55b282; --rest:#e6b73a; --danger:#e0675f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1013; --panel:#171a1f; --ink:#eceef1; --soft:#9aa2ae; --line:#2a2f37; --field:#1f2329;
+  --accent:#5c8ef0; --accent-ink:#0b1220; --good:#55b282; --rest:#e6b73a; --danger:#e0675f; color-scheme:dark}
+/* ===================== /THEME ===================== */
+
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--font-body);-webkit-tap-highlight-color:transparent}
+#app{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 0;min-height:100vh;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;letter-spacing:.01em;margin:0;text-wrap:balance}
+h1{font-size:34px;line-height:1.05}
+h2{font-size:26px;line-height:1.1}
+h3{font-size:21px;line-height:1.15}
+.muted{color:var(--soft)}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.iconbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;flex:none}
+.iconbtn svg{width:20px;height:20px}
+.link{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;padding:8px 4px}
+
+.btn{min-height:var(--tap);border-radius:999px;border:1px solid var(--line);background:var(--panel);font-weight:700;font-size:17px;padding:0 22px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.good{background:var(--good);border-color:var(--good);color:#fff}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--danger);border-color:var(--danger);background:transparent}
+.btn.block{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.row>.btn{flex:1 1 140px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.daycard{cursor:pointer;text-align:left;width:100%}
+.daycard .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--soft)}
+.daycard ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:15px}
+.daycard li{display:flex;gap:10px}
+.daycard li b{min-width:26px;font-family:var(--font-display);font-size:17px;color:var(--soft)}
+.banner{background:var(--accent);color:var(--accent-ink);border-radius:var(--r-lg);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;border:0;width:100%;text-align:left}
+.note{font-size:13px;color:var(--soft);text-align:center;padding-bottom:8px}
+
+/* exercise blocks */
+.ex{display:flex;flex-direction:column;gap:10px}
+.exhead{display:flex;align-items:flex-start;gap:12px}
+.badge{flex:none;min-width:40px;height:40px;padding:0 8px;border-radius:12px;background:var(--field);border:1px solid var(--line);display:grid;place-items:center;font-family:var(--font-display);font-size:20px;font-weight:700}
+.exhead .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12.5px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--field);border:1px solid var(--line);color:var(--soft);white-space:nowrap}
+.chip.accent{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--line))}
+.ss{border:2px solid color-mix(in srgb,var(--accent) 45%,var(--line))}
+.ss .sshead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.divider{height:1px;background:var(--line);margin:4px 0}
+
+/* set grid, after the reference screenshot: Set | Reps | Weight (kg) */
+.sets{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) minmax(44px,auto);gap:8px;align-items:center}
+.sets .h{font-weight:700;font-size:14px;white-space:nowrap}
+.sets .s{font-size:20px;color:var(--soft);font-variant-numeric:tabular-nums;padding-left:4px}
+.sets input{width:100%;height:56px;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--field);color:var(--ink);font:500 20px var(--font-body);padding:0 12px;font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none}
+.sets input:focus{border-color:var(--accent);outline:none;background:var(--panel)}
+.sets .st{font-size:12.5px;color:var(--soft);text-align:right;font-variant-numeric:tabular-nums}
+.sets .st.done{color:var(--good);font-weight:700}
+.sets .on input{border-color:var(--accent)}
+.sets .act{grid-column:1/-1;height:0}
+.sets .cur{color:var(--accent);font-weight:700}
+
+/* focus view */
+.progress{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.video{position:relative;border-radius:var(--r-lg);overflow:hidden;background:#000;display:flex;justify-content:center;height:min(36vh,340px);max-width:100%}
+.video iframe{border:0;height:100%;width:100%;max-width:100%}
+.video.short iframe{width:auto;aspect-ratio:9/16}
+.vlink{display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--r-lg);background:var(--ink);color:var(--bg);text-decoration:none;min-height:88px}
+.vlink .play{width:52px;height:52px;border-radius:50%;background:var(--bg);color:var(--ink);display:grid;place-items:center;flex:none}
+.vlink .play svg{width:22px;height:22px;margin-left:3px}
+.vlink b{display:block;font-size:17px}
+.vlink span{font-size:13px;opacity:.75}
+.vsub{font-size:13px;text-align:right}
+.rounds{display:flex;gap:6px;flex-wrap:wrap}
+.rounds .chip.now{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.rounds .chip.ok{color:var(--good)}
+.tempo{font-size:13px;color:var(--soft)}
+
+.dock{position:sticky;bottom:0;margin:auto calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px;z-index:5}
+.dock .next{font-size:13.5px;color:var(--soft);text-align:center}
+
+.timer{display:flex;align-items:center;gap:16px}
+.ring{width:96px;height:96px;flex:none;position:relative}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:9}
+.ring .bgc{stroke:var(--line)}
+.ring .fg{stroke:var(--rest);stroke-linecap:round;transition:stroke-dashoffset .25s linear}
+.ring b{position:absolute;inset:0;display:grid;place-items:center;font:700 30px var(--font-display);font-variant-numeric:tabular-nums}
+.timer .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.timer .row .btn{min-height:44px;font-size:15px;flex:1 1 80px}
+.hold{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r-md);background:var(--field);border:1px dashed var(--line)}
+.hold b{font:700 28px var(--font-display);font-variant-numeric:tabular-nums;min-width:58px}
+.hold .btn{min-height:44px;font-size:15px;margin-left:auto}
+.confirm{border:1.5px solid var(--danger)}
+
+/* summary */
+.sumtext{width:100%;min-height:220px;border-radius:var(--r-md);border:1px solid var(--line);background:var(--field);color:var(--ink);font:13.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:12px;resize:vertical}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:var(--field);border-radius:var(--r-md);padding:10px 12px}
+.stat b{display:block;font:700 26px var(--font-display);font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--soft)}
+.slist{display:flex;flex-direction:column;gap:10px}
+.sitem{display:flex;flex-direction:column;gap:2px}
+.sitem .l{font-size:14px;color:var(--soft);font-variant-numeric:tabular-nums}
+.hist{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;width:100%;text-align:left}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+.ref{font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums}
+.ref b{color:var(--ink);font-weight:600}
+.topright{display:flex;align-items:center;gap:6px}
+.fab{position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));width:48px;height:48px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--danger);display:grid;place-items:center;box-shadow:0 4px 14px rgba(0,0,0,.18);cursor:pointer;z-index:15}
+.fab svg{width:22px;height:22px}
+.fab .n{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--danger);color:#fff;font:700 11px/20px var(--font-body);text-align:center;padding:0 5px}
+.sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:31;background:var(--panel);border-radius:var(--r-lg) var(--r-lg) 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:12px;max-width:560px;margin:0 auto}
+.sheet textarea,.field{width:100%;border-radius:var(--r-md);border:1.5px solid var(--line);background:var(--field);color:var(--ink);font:16px/1.4 var(--font-body);padding:12px}
+.sheet textarea{min-height:120px;resize:vertical}
+.ctx{font-size:12.5px;color:var(--soft);background:var(--field);border-radius:var(--r-sm);padding:8px 10px}
+.fbitem{display:flex;flex-direction:column;gap:4px;padding-block:10px;border-top:1px solid var(--line)}
+.fbitem:first-of-type{border-top:0}
+.fbitem.fixed{opacity:.55}
+.steps{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--soft)}
+.sync{font-size:13px;color:var(--soft)}
+.sync.bad{color:var(--danger)}
+@media (max-width:360px){.card{padding:14px}.sets input{font-size:18px;padding:0 8px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div id="app"></div>
+<div id="toast" class="toast" hidden></div>
+<button id="fab" class="fab" data-act="fbopen" aria-label="Leave a note for Claude"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.9 1.9M16 2l-1.9 1.9M9 7.1V6a3 3 0 0 1 6 0v1.1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6zM12 20v-9M6.5 9C4.6 8.8 3 7.2 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.9 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg><span class="n" id="fabn" hidden></span></button>
+<div id="sheet" hidden></div>
+
+<script>
+/* ===================== PROGRAM =====================
+   From "lower sk.xlsx". Same number with letters (6A, 6B) = superset.
+   tempo "311" = 3s lowering, 1s pause, 1s lifting. hold = seconds for timed holds. */
+var PROGRAM = {
+  d1: { label: 'Day 1', name: 'Lower 1', items: [
+    { no:'1',  id:'goblet-squat',   name:'DB Goblet Squat',              reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/K2TumOeks2A' },
+    { no:'2',  id:'db-rdl',         name:'DB Romanian Deadlift',         reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/CBOhr6H7BEY' },
+    { no:'3',  id:'cossack-squat',  name:'Cossack Squat',                reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/XvJ8gtW30ZA' },
+    { no:'4',  id:'sl-smith-calf',  name:'Single-Leg Smith Calf Raise',  reps:'10',     sets:2, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/GoNhkc7ZVVc' },
+    { no:'5',  id:'sl-glute-bridge',name:'Single-Leg Glute Bridge',      reps:'10',     sets:2, tempo:'',      rest:60,  url:'https://youtube.com/shorts/RNMIy5Q5XBY' },
+    { no:'6A', id:'copenhagen-plank',name:'Copenhagen Plank',            reps:'30 sec', sets:2, tempo:'ISO',   rest:120, url:'https://youtube.com/shorts/Ua7YHHOWRlA', hold:30 },
+    { no:'6B', id:'farmers-carry',  name:'Farmers Carry',                reps:'8',      sets:2, tempo:'CONTR.',rest:120, url:'https://youtube.com/shorts/Ozp9nI_w4xo' }
+  ]},
+  d2: { label: 'Day 2', name: 'Lower 2', items: [
+    { no:'1',  id:'sl-hip-thrust',  name:'DB Single-Leg Hip Thrust',     reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/bRZeB6UG6Js' },
+    { no:'2',  id:'split-squat',    name:'DB Split Squat',               reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/sw4MzpC8l58' },
+    { no:'3',  id:'ham-curl',       name:'Machine Hamstring Curl',       reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/kYx9uchpwVo' },
+    { no:'4',  id:'sl-seated-calf', name:'Single-Leg Seated Calf Raise', reps:'10',     sets:2, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/0T0LtUAqPmU' },
+    { no:'5A', id:'sl-elev-plank',  name:'Single-Leg Elevated Plank',    reps:'30 sec', sets:2, tempo:'',      rest:120, url:'https://youtube.com/shorts/QfU2iZFeN-M', hold:30 },
+    { no:'5B', id:'wall-leg-lower', name:'Wall Press Leg Lower',         reps:'8 each', sets:2, tempo:'ISO',   rest:120, url:'https://youtu.be/XsdtPDgfRM4' },
+    { no:'5C', id:'suitcase-carry', name:'Suitcase Carry',               reps:'15 m',   sets:2, tempo:'CONTR.',rest:120, url:'https://youtube.com/shorts/iTjwbts8Djw' }
+  ]}
+};
+var SUPERSET_REST = 120;
+/* ===================== /PROGRAM ===================== */
+
+var APP_VERSION = '2';
+/* Secret Gist that holds history.json and feedback.json. The token that writes it lives only on the phone. */
+var GIST_ID = 'e907ba07cdb5d1fbf3337d16a64528ba';
+var FAST = /[?#&]fast/.test(location.href);   // add #fast to test with 5s rests
+var IN_ARTIFACT = !!window.claude;             // claude.ai pages cannot embed YouTube, so link out there
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function exById(id){ for (var k in PROGRAM){ var f = PROGRAM[k].items.filter(function(x){ return x.id === id; })[0]; if (f) return f; } return null; }
+function ytId(url){ var m = url.match(/(?:shorts\/|youtu\.be\/|v=)([\w-]{11})/); return m ? m[1] : ''; }
+function isShort(url){ return url.indexOf('/shorts/') > -1; }
+function tempoText(t){ if (/^\d{3}$/.test(t)) return t.split('').join('-') + ' tempo'; if (t === 'ISO') return 'Isometric hold'; if (t === 'CONTR.') return 'Controlled'; return ''; }
+function numeric(s){ return /^\d+(\.\d+)?$/.test(String(s).trim()); }
+
+function blocks(dk){
+  var out = [], map = {};
+  PROGRAM[dk].items.forEach(function(it){
+    var n = parseInt(it.no, 10);
+    if (!map[n]){ map[n] = { n: n, items: [] }; out.push(map[n]); }
+    map[n].items.push(it);
+  });
+  out.forEach(function(b){
+    b.superset = b.items.length > 1;
+    b.sets = Math.max.apply(null, b.items.map(function(i){ return i.sets; }));
+    b.rest = b.superset ? SUPERSET_REST : b.items[0].rest;
+  });
+  return out;
+}
+// Normal exercise: set, rest, set, rest, set. Superset: A, B, C back to back, rest, then the next round.
+function buildSteps(dk){
+  var out = [];
+  blocks(dk).forEach(function(b, bi){
+    for (var r = 0; r < b.sets; r++){
+      var round = b.items.filter(function(it){ return r < it.sets; });
+      round.forEach(function(it, ii){
+        var lastInRound = ii === round.length - 1, lastRound = r === b.sets - 1;
+        out.push({ b: bi, ex: it.id, set: r, rest: lastInRound && !lastRound ? (FAST ? 5 : b.rest) : 0, end: lastInRound && lastRound });
+      });
+    }
+  });
+  return out;
+}
+function estMinutes(dk){
+  return Math.round(buildSteps(dk).reduce(function(t, s){ return t + 45 + s.rest; }, 0) / 60);
+}
+
+/* ===================== STATE + STORAGE ===================== */
+var KEY_ACTIVE = 'lbl.active', KEY_PLAN = 'lbl.plan', KEY_HIST = 'lbl.history';
+function lsGet(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } }
+function lsSet(k, v){ try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+var S = { view: 'home', day: 'd1', rec: null, confirm: false, confirmDel: false };
+var W = lsGet(KEY_ACTIVE, null);          // the workout in progress
+var PLAN = lsGet(KEY_PLAN, {});           // edits made on the overview before starting
+var HIST = lsGet(KEY_HIST, []);           // finished workouts (mirrored to claude.ai when available)
+var cloud = null, DL = null;
+var TOKEN = lsGet('lbl.token', '');
+var FEEDBACK = lsGet('lbl.feedback', []);   // notes from the bug button
+function hist(){ return HIST.filter(function(h){ return !h.deleted; }); }
+function stamp(rec){
+  // readable date + day on every record, so the Gist copy makes sense on its own
+  var d = new Date(rec.started);
+  rec.date = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  rec.dayLabel = PROGRAM[rec.day].label; rec.workout = PROGRAM[rec.day].name;
+  if (!rec.updated) rec.updated = rec.ended || rec.started;
+  return rec;
+}
+HIST.forEach(stamp);
+
+/* ---- Gist sync: pull first, merge by id (newest `updated` wins), then push ---- */
+var SYNC = { state: '', at: 0, pulled: false }, pushT = null;
+var GIST_API = function(){ return 'https://api.github.com/gists/' + GIST_ID; };
+function gistHeaders(json){ var h = { Accept: 'application/vnd.github+json' }; if (TOKEN) h.Authorization = 'Bearer ' + TOKEN; if (json) h['Content-Type'] = 'application/json'; return h; }
+function mergeList(local, remote, keyTime){
+  var map = {}, extra = false;
+  local.forEach(function(x){ map[x.id] = x; });
+  remote.forEach(function(r){ var l = map[r.id]; if (!l || (r[keyTime] || 0) > (l[keyTime] || 0)) map[r.id] = r; });
+  var ids = {}; remote.forEach(function(r){ ids[r.id] = r; });
+  local.forEach(function(l){ if (!ids[l.id] || (l[keyTime] || 0) > (ids[l.id][keyTime] || 0)) extra = true; });
+  return { list: Object.keys(map).map(function(k){ return map[k]; }), extra: extra };
+}
+function gistPull(){
+  if (!GIST_ID) return Promise.resolve();
+  SYNC.state = 'syncing'; updSync();
+  return fetch(GIST_API(), { headers: gistHeaders(), cache: 'no-store' }).then(function(r){ if (!r.ok) throw r.status; return r.json(); }).then(function(g){
+    var get = function(name){ var f = g.files && g.files[name]; if (!f) return Promise.resolve([]);
+      if (f.truncated) return fetch(f.raw_url).then(function(r){ return r.json(); });
+      try { return Promise.resolve(JSON.parse(f.content || '[]')); } catch(e){ return Promise.resolve([]); } };
+    return Promise.all([get('history.json'), get('feedback.json')]);
+  }).then(function(r){
+    var h = mergeList(HIST, r[0] || [], 'updated'), f = mergeList(FEEDBACK, r[1] || [], 'updated');
+    HIST = h.list.map(stamp).sort(function(a, b){ return b.started - a.started; }); lsSet(KEY_HIST, HIST);
+    FEEDBACK = f.list.sort(function(a, b){ return b.at - a.at; }); lsSet('lbl.feedback', FEEDBACK);
+    SYNC.pulled = true; SYNC.state = 'ok'; SYNC.at = Date.now(); updSync();
+    if (h.extra || f.extra) schedulePush();
+    if (S.view !== 'focus') render();
+  }).catch(function(e){ SYNC.state = (e === 401 || e === 403 || e === 404) ? 'auth' : 'offline'; updSync(); });
+}
+function schedulePush(){ if (!GIST_ID || !TOKEN) return; clearTimeout(pushT); pushT = setTimeout(gistPush, 1200); }
+function gistPush(){
+  if (!GIST_ID || !TOKEN) return Promise.resolve();
+  // never overwrite the Gist before we've merged what is already in it
+  return (SYNC.pulled ? Promise.resolve() : gistPull()).then(function(){
+    if (!SYNC.pulled) return;
+    SYNC.state = 'syncing'; updSync();
+    var body = { files: {
+      'history.json': { content: JSON.stringify(HIST, null, 1) },
+      'feedback.json': { content: JSON.stringify(FEEDBACK, null, 1) } } };
+    return fetch(GIST_API(), { method: 'PATCH', headers: gistHeaders(true), body: JSON.stringify(body) }).then(function(r){
+      if (!r.ok) throw r.status; SYNC.state = 'ok'; SYNC.at = Date.now(); updSync();
+    });
+  }).catch(function(e){ SYNC.state = (e === 401 || e === 403 || e === 404) ? 'auth' : 'offline'; updSync(); });
+}
+function syncText(){
+  if (!GIST_ID) return 'Saved on this phone';
+  if (!TOKEN) return 'Saved on this phone. Add your token in Settings to back up and send notes.';
+  if (SYNC.state === 'syncing') return 'Syncing…';
+  if (SYNC.state === 'auth') return 'GitHub refused the token. Check it in Settings.';
+  if (SYNC.state === 'offline') return 'Offline. Saved on this phone, will sync later.';
+  if (SYNC.at) return 'Backed up to your Gist at ' + fmtTime(SYNC.at);
+  return 'Backup to your Gist is on';
+}
+function updSync(){ var e = $('syncnote'); if (e){ e.textContent = syncText(); e.className = 'note sync' + (SYNC.state === 'auth' || SYNC.state === 'offline' ? ' bad' : ''); } }
+window.addEventListener('online', function(){ schedulePush(); });
+
+var backend = {
+  put: function(rec){
+    stamp(rec); HIST = HIST.filter(function(h){ return h.id !== rec.id; }); HIST.push(rec);
+    HIST.sort(function(a, b){ return b.started - a.started; }); lsSet(KEY_HIST, HIST); schedulePush();
+    if (cloud) return cloud.col.doc(rec.id).set(JSON.parse(JSON.stringify(rec)));
+    return Promise.resolve();
+  },
+  del: function(id){
+    HIST.forEach(function(h){ if (h.id === id){ h.deleted = true; h.updated = Date.now(); } }); lsSet(KEY_HIST, HIST); schedulePush();
+    if (cloud) return cloud.col.doc(id).delete();
+    return Promise.resolve();
+  }
+};
+(function connect(){
+  if (!window.claude || !window.claude.use) return;
+  Promise.all([claude.use('db'), claude.use('user'), claude.use('downloads')]).then(function(r){
+    DL = r[2] || null;
+    var db = r[0], user = r[1]; if (!db || !user) { render(); return; }
+    return user.id().then(function(uid){
+      if (!uid) return;
+      cloud = { col: db.collection('data/users/' + uid) };
+      // push anything saved only on this phone, then follow the account copy
+      var local = HIST.slice();
+      cloud.col.orderBy('started', 'desc').limit(200).onSnapshot(function(snap){
+        var remote = snap.docs.map(function(d){ var o = JSON.parse(JSON.stringify(d.data())); o.id = d.id; return o; });
+        var ids = {}; remote.forEach(function(x){ ids[x.id] = 1; });
+        local.forEach(function(x){ if (!ids[x.id]) { cloud.col.doc(x.id).set(x).catch(function(){}); remote.push(x); } });
+        local = [];
+        remote.sort(function(a, b){ return b.started - a.started; });
+        HIST = remote; lsSet(KEY_HIST, HIST.slice(0, 200));
+        if (S.view !== 'focus') render();
+      }, function(){ cloud = null; render(); });
+      render();
+    });
+  }).catch(function(){});
+})();
+
+function saveActive(){ lsSet(KEY_ACTIVE, W); }
+function lastFor(exId){
+  var H = hist();
+  for (var i = 0; i < H.length; i++){
+    var s = H[i].sets && H[i].sets[exId];
+    if (s && s.some(function(x){ return x && x.kg !== '' && x.kg != null; })) return { rec: H[i], sets: s };
+  }
+  return null;
+}
+function lastLine(exId){
+  var l = lastFor(exId); if (!l) return '<div class="ref">No previous weights yet</div>';
+  return '<div class="ref">Last time, ' + fmtDate(l.rec.started) + ' (' + PROGRAM[l.rec.day].label + '): <b>' +
+    l.sets.map(function(x){ return x.kg === '' || x.kg == null ? 'BW' : x.kg; }).join(' / ') + ' kg</b></div>';
+}
+function planVal(dk, exId, i, f){
+  var p = PLAN[dk] && PLAN[dk][exId] && PLAN[dk][exId][i];
+  if (p && p[f] != null) return p[f];
+  if (f === 'reps') return exById(exId).reps;
+  var last = lastFor(exId); return last && last.sets[i] ? (last.sets[i].kg || '') : '';
+}
+
+function startWorkout(dk){
+  var sets = {};
+  PROGRAM[dk].items.forEach(function(it){
+    sets[it.id] = [];
+    for (var i = 0; i < it.sets; i++) sets[it.id].push({ reps: planVal(dk, it.id, i, 'reps'), kg: planVal(dk, it.id, i, 'kg'), at: null });
+  });
+  W = { id: 'w' + Date.now(), day: dk, started: Date.now(), cur: 0, rest: null, hold: null, blockDone: false, sets: sets };
+  saveActive(); S.view = 'focus'; S.confirm = false; wake(); render();
+}
+function stepsOf(){ return buildSteps(W.day); }
+function doneSet(){
+  var steps = stepsOf(), st = steps[W.cur];
+  W.sets[st.ex][st.set].at = Date.now(); W.hold = null;
+  if (st.rest) W.rest = { until: Date.now() + st.rest * 1000, total: st.rest };
+  else if (st.end) W.blockDone = true;
+  else W.cur++;
+  saveActive(); render();
+}
+function endRest(silent){
+  if (!W || !W.rest) return;
+  W.rest = null; W.cur++; saveActive();
+  if (!silent) beep(2);
+  render();
+}
+function gotoBlock(bi){
+  var steps = stepsOf(), idx = steps.findIndex(function(s){ return s.b === bi; });
+  if (idx < 0) return finishWorkout();
+  W.cur = idx; W.rest = null; W.hold = null; W.blockDone = false; saveActive(); render(); scrollTo(0, 0);
+}
+function finishWorkout(){
+  var sets = {};
+  Object.keys(W.sets).forEach(function(k){
+    var done = W.sets[k].filter(function(x){ return x.at; });
+    if (done.length) sets[k] = W.sets[k].map(function(x){ return x.at ? x : null; }).filter(Boolean);
+  });
+  var ats = []; Object.keys(sets).forEach(function(k){ sets[k].forEach(function(x){ ats.push(x.at); }); });
+  var rec = { id: W.id, day: W.day, started: W.started, ended: ats.length ? Math.max.apply(null, ats) : Date.now(), sets: sets };
+  W = null; saveActive(); delete PLAN[rec.day]; lsSet(KEY_PLAN, PLAN); unwake();
+  S.rec = rec; S.view = 'summary'; S.saved = '';
+  if (Object.keys(sets).length){
+    backend.put(rec).then(function(){ S.saved = cloud ? 'Saved to your history (synced to your claude.ai account)' : 'Saved to your history on this phone'; render(); })
+      .catch(function(){ S.saved = 'Saved on this phone. Could not reach your account.'; render(); });
+  }
+  render(); scrollTo(0, 0);
+}
+
+/* ===================== SUMMARY TEXT ===================== */
+function fmtTime(t){ var d = new Date(t); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+function fmtDate(t){ return new Date(t).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }); }
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function mins(rec){ return Math.max(1, Math.round((rec.ended - rec.started) / 60000)); }
+function volume(rec){
+  var v = 0; Object.keys(rec.sets).forEach(function(k){ rec.sets[k].forEach(function(x){ var r = parseFloat(x.reps), kg = parseFloat(x.kg); if (numeric(x.reps) && !isNaN(kg)) v += r * kg; }); });
+  return Math.round(v);
+}
+function setCount(rec){ var n = 0; Object.keys(rec.sets).forEach(function(k){ n += rec.sets[k].length; }); return n; }
+function setLine(x, i){
+  var kg = x.kg === '' || x.kg == null ? 'bodyweight' : x.kg + ' kg';
+  var reps = numeric(x.reps) ? x.reps + ' reps' : x.reps;
+  return 'Set ' + (i + 1) + ': ' + reps + ' x ' + kg + '  (' + fmtTime(x.at) + ')';
+}
+function stravaText(rec){
+  var p = PROGRAM[rec.day], lines = [];
+  lines.push(p.name + ' strength session (' + p.label + ')');
+  lines.push(fmtDate(rec.started) + ', ' + fmtTime(rec.started) + ' to ' + fmtTime(rec.ended) + ', ' + mins(rec) + ' min');
+  lines.push(setCount(rec) + ' sets, ' + volume(rec).toLocaleString() + ' kg total volume');
+  blocks(rec.day).forEach(function(b){
+    var done = b.items.filter(function(it){ return rec.sets[it.id]; });
+    if (!done.length) return;
+    lines.push('');
+    if (b.superset) lines.push('Superset ' + b.n + ' (' + done.map(function(i){ return i.no; }).join(' + ') + ')');
+    done.forEach(function(it){
+      lines.push(it.no + '. ' + it.name + (it.tempo ? ' [' + (tempoText(it.tempo) || it.tempo) + ']' : ''));
+      rec.sets[it.id].forEach(function(x, i){ lines.push('   ' + setLine(x, i)); });
+    });
+  });
+  return lines.join('\n');
+}
+function csv(rec){
+  var q = function(s){ s = String(s == null ? '' : s); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  var rows = [['date', 'day', 'workout', 'no', 'exercise', 'set', 'reps', 'kg', 'completed_at']];
+  PROGRAM[rec.day].items.forEach(function(it){
+    (rec.sets[it.id] || []).forEach(function(x, i){
+      var d = new Date(x.at);
+      rows.push([d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()), PROGRAM[rec.day].label, PROGRAM[rec.day].name, it.no, it.name, i + 1, x.reps, x.kg, fmtTime(x.at)]);
+    });
+  });
+  return rows.map(function(r){ return r.map(q).join(','); }).join('\n');
+}
+function fileName(rec, ext){ var d = new Date(rec.started); return PROGRAM[rec.day].name.replace(/\s+/g, '-').toLowerCase() + '-' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.' + ext; }
+
+/* ===================== VIEW =====================
+   Small template functions; restyle here without touching state or timers. */
+var ICON = {
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
+};
+function topBar(title, backAct, right){
+  return '<div class="top">' + (backAct ? '<button class="iconbtn" data-act="' + backAct + '" aria-label="Back">' + ICON.back + '</button>' : '<span></span>') +
+    '<div style="flex:1;min-width:0;text-align:center"><h3>' + esc(title) + '</h3></div>' + (right || '<span style="width:44px"></span>') + '</div>';
+}
+function chips(it, withRest){
+  var c = '<span class="chip accent">' + esc(it.reps) + (numeric(it.reps) ? ' reps' : '') + '</span><span class="chip">' + it.sets + ' sets</span>';
+  if (it.tempo) c += '<span class="chip">' + esc(tempoText(it.tempo) || it.tempo) + '</span>';
+  if (withRest) c += '<span class="chip">' + (it.rest / 60) + ' min rest</span>';
+  return '<div class="chips">' + c + '</div>';
+}
+function setGrid(rows){
+  // rows: [{i, reps, kg, scope, ex, status, statusDone, on}]
+  var h = '<div class="sets"><span class="h">Set</span><span class="h">Reps</span><span class="h">Weight (kg)</span><span></span>';
+  rows.forEach(function(r){
+    var on = r.on ? ' on' : '';
+    h += '<span class="s' + (r.on ? ' cur' : '') + '">' + (r.i + 1) + '</span>' +
+      '<span class="' + on + '"><input id="' + r.scope + '-' + r.ex + '-' + r.i + '-reps" data-in="' + r.scope + '" data-ex="' + r.ex + '" data-i="' + r.i + '" data-f="reps" value="' + esc(r.reps) + '" inputmode="' + (numeric(r.reps) || r.reps === '' ? 'numeric' : 'text') + '" aria-label="Set ' + (r.i + 1) + ' reps"></span>' +
+      '<span class="' + on + '"><input id="' + r.scope + '-' + r.ex + '-' + r.i + '-kg" data-in="' + r.scope + '" data-ex="' + r.ex + '" data-i="' + r.i + '" data-f="kg" value="' + esc(r.kg) + '" inputmode="decimal" placeholder="kg" aria-label="Set ' + (r.i + 1) + ' weight in kg"></span>' +
+      '<span class="st' + (r.statusDone ? ' done' : '') + '">' + (r.status || '') + '</span>';
+  });
+  return h + '</div>';
+}
+function videoBlock(it){
+  var link = '<a class="vlink" href="' + esc(it.url) + '" target="_blank" rel="noopener"><span class="play">' + ICON.play + '</span><span><b>Watch reference</b><span>' + esc(it.name) + ' on YouTube</span></span></a>';
+  if (IN_ARTIFACT) return link;
+  return '<div class="video' + (isShort(it.url) ? ' short' : '') + '"><iframe src="https://www.youtube-nocookie.com/embed/' + ytId(it.url) + '?playsinline=1&rel=0&modestbranding=1" title="' + esc(it.name) + ' reference video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>' +
+    '<a class="vsub" href="' + esc(it.url) + '" target="_blank" rel="noopener">Video not loading? Open on YouTube</a>';
+}
+
+function viewHome(){
+  var h = '<div class="top"><div><div class="eyebrow">Strength</div><h1>Lower Body Log</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
+    '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="history">History</button><button class="link" data-act="settings">Settings and notes</button></div>';
+  if (W){
+    var it = exById(stepsOf()[W.cur].ex);
+    h += '<button class="banner" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button>';
+  }
+  ['d1', 'd2'].forEach(function(dk){
+    var p = PROGRAM[dk], last = hist().filter(function(x){ return x.day === dk; })[0];
+    h += '<button class="card daycard" data-act="day" data-day="' + dk + '"><div><div class="eyebrow">' + p.label + '</div><h2>' + p.name + '</h2></div>' +
+      '<div class="meta"><span>' + p.items.length + ' exercises</span><span>about ' + estMinutes(dk) + ' min</span><span>' + (last ? 'Last done ' + fmtDate(last.started) : 'Not done yet') + '</span></div>' +
+      '<ol>' + p.items.map(function(it){ return '<li><b>' + it.no + '</b><span>' + esc(it.name) + '</span></li>'; }).join('') + '</ol></button>';
+  });
+  h += '<div class="note" id="syncnote">' + esc(syncText()) + '</div>';
+  return h;
+}
+
+function viewDay(){
+  var dk = S.day, p = PROGRAM[dk];
+  var h = topBar(p.name, 'home');
+  h += '<div class="muted" style="text-align:center;margin-top:-8px">' + p.label + ' · ' + p.items.length + ' exercises · about ' + estMinutes(dk) + ' min</div>';
+  blocks(dk).forEach(function(b){
+    var inner = b.items.map(function(it, k){
+      var rows = []; for (var i = 0; i < it.sets; i++) rows.push({ i: i, scope: 'plan', ex: it.id, reps: planVal(dk, it.id, i, 'reps'), kg: planVal(dk, it.id, i, 'kg') });
+      return (k ? '<div class="divider"></div>' : '') + '<div class="ex"><div class="exhead"><span class="badge">' + it.no + '</span><div class="t"><h3>' + esc(it.name) + '</h3>' + chips(it, !b.superset) +
+        '<a href="' + esc(it.url) + '" target="_blank" rel="noopener" style="font-size:14px;font-weight:600">Watch reference</a></div></div>' + setGrid(rows) + lastLine(it.id) + '</div>';
+    }).join('');
+    if (b.superset) h += '<section class="card ss"><div class="sshead"><span class="eyebrow">Superset ' + b.n + '</span><span class="chip">' + b.sets + ' rounds · ' + (SUPERSET_REST / 60) + ' min rest after each round</span></div>' + inner + '</section>';
+    else h += '<section class="card">' + inner + '</section>';
+  });
+  h += '<div class="dock">' + (W && W.day !== dk ? '<div class="next">Starting this ends your ' + PROGRAM[W.day].name + ' workout in progress.</div>' : '') +
+    (W && W.day === dk ? '<button class="btn primary block" data-act="resume">Resume workout</button>' : '<button class="btn primary block" data-act="start">Start workout</button>') + '</div>';
+  return h;
+}
+
+function viewFocus(){
+  var steps = stepsOf(), st = steps[W.cur], bl = blocks(W.day), b = bl[st.b], it = exById(st.ex);
+  var doneCount = steps.filter(function(s){ return W.sets[s.ex][s.set].at; }).length;
+  var h = topBar(PROGRAM[W.day].name, 'home', '<button class="link" data-act="end" style="color:var(--danger)">End</button>');
+  h += '<div class="progress" aria-label="Workout progress"><i style="width:' + Math.round(doneCount / steps.length * 100) + '%"></i></div>';
+  if (S.confirm){
+    h += '<div class="card confirm"><b>Finish this workout now?</b><span class="muted">Sets you have marked done go into the summary.</span><div class="row">' +
+      '<button class="btn primary" data-act="finish">Finish and see summary</button><button class="btn" data-act="keep">Keep going</button></div>' +
+      '<button class="link" data-act="discard" style="color:var(--danger);align-self:flex-start">Discard without saving</button></div>';
+  }
+  h += '<div class="eyebrow">Exercise ' + (st.b + 1) + ' of ' + bl.length + (b.superset ? ' · Superset ' + b.n + ' · Round ' + (st.set + 1) + ' of ' + b.sets : '') + '</div>';
+  if (b.superset){
+    h += '<div class="rounds">' + b.items.map(function(x){
+      var ok = W.sets[x.id][st.set] && W.sets[x.id][st.set].at;
+      return '<span class="chip' + (x.id === it.id && !W.rest && !W.blockDone ? ' now' : ok ? ' ok' : '') + '">' + (ok ? '✓ ' : '') + x.no + ' ' + esc(x.name) + '</span>';
+    }).join('') + '</div>';
+  }
+  h += videoBlock(it);
+  h += '<div class="exhead"><span class="badge">' + it.no + '</span><div class="t"><h2>' + esc(it.name) + '</h2>' + chips(it, false) + '</div></div>';
+
+  if (it.hold && !W.rest && !W.blockDone){
+    var left = W.hold ? Math.max(0, Math.ceil((W.hold.until - Date.now()) / 1000)) : (FAST ? 3 : it.hold);
+    h += '<div class="hold">' + ICON.clock + '<b id="htime">0:' + pad(left) + '</b><span class="muted">Hold timer</span>' +
+      (W.hold ? '<button class="btn" data-act="holdstop">Stop</button>' : '<button class="btn" data-act="hold">Start ' + it.hold + 's hold</button>') + '</div>';
+  }
+
+  var rows = W.sets[it.id].map(function(x, i){
+    var active = i === st.set && !W.rest && !W.blockDone;
+    return { i: i, scope: 'w', ex: it.id, reps: x.reps, kg: x.kg, on: active, status: x.at ? '✓ ' + fmtTime(x.at) : active ? 'Now' : '', statusDone: !!x.at };
+  });
+  h += '<div class="card">' + setGrid(rows) + lastLine(it.id) + '</div>';
+
+  h += '<div class="row" style="justify-content:space-between">' + (st.b > 0 ? '<button class="link" data-act="prevex">Previous exercise</button>' : '<span></span>') +
+    (st.b < bl.length - 1 ? '<button class="link" data-act="skipex">Skip to next exercise</button>' : '') + '</div>';
+
+  // action dock
+  var dock = '';
+  if (W.rest){
+    var next = steps[W.cur + 1], nit = exById(next.ex);
+    dock += '<div class="timer"><div class="ring"><svg viewBox="0 0 100 100"><circle class="bgc" cx="50" cy="50" r="44"/><circle id="rring" class="fg" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><b id="rtime">0:00</b></div>' +
+      '<div class="info"><div><div class="eyebrow">Rest</div><div><b>Next:</b> ' + (b.superset ? 'Round ' + (next.set + 1) + ', ' : 'Set ' + (next.set + 1) + ', ') + esc(nit.no + ' ' + nit.name) + '</div></div>' +
+      '<div class="row"><button class="btn" data-act="plus30">+30s</button><button class="btn" data-act="skiprest">Skip</button></div></div></div>';
+  } else if (W.blockDone){
+    var nb = bl[st.b + 1];
+    dock += nb ? '<div class="next">All sets done. Up next: ' + esc(nb.items.map(function(x){ return x.no + ' ' + x.name; }).join(' + ')) + '</div><button class="btn good block" data-act="nextex">Next exercise</button>'
+      : '<div class="next">That was the last exercise.</div><button class="btn good block" data-act="finish">Finish workout</button>';
+  } else {
+    var after = steps[W.cur + 1], label = 'Done set ' + (st.set + 1);
+    if (b.superset && !st.rest && !st.end) label = 'Done, go to ' + exById(after.ex).no;
+    else if (st.rest) label += ' · start ' + (st.rest >= 60 ? (st.rest / 60) + ' min' : st.rest + 's') + ' rest';
+    dock += '<button class="btn primary block" data-act="done">' + label + '</button>';
+  }
+  h += '<div class="dock">' + dock + '</div>';
+  return h;
+}
+
+function viewSummary(){
+  var rec = S.rec, p = PROGRAM[rec.day], fromHist = S.fromHist;
+  var h = topBar(fromHist ? p.name : 'Workout done', fromHist ? 'history' : 'home');
+  h += '<div class="muted" style="text-align:center;margin-top:-8px">' + fmtDate(rec.started) + ' · ' + fmtTime(rec.started) + ' to ' + fmtTime(rec.ended) + '</div>';
+  if (!Object.keys(rec.sets).length) return h + '<div class="card">No sets were marked done, so nothing was saved.</div><button class="btn block" data-act="home">Back to start</button>';
+  h += '<div class="stats"><div class="stat"><b>' + mins(rec) + '</b><span>minutes</span></div><div class="stat"><b>' + setCount(rec) + '</b><span>sets</span></div><div class="stat"><b>' + volume(rec).toLocaleString() + '</b><span>kg volume</span></div></div>';
+  if (S.saved) h += '<div class="note" style="text-align:left">' + esc(S.saved) + '</div>';
+  h += '<div class="card"><div><h3>For Strava</h3><span class="muted" style="font-size:14px">Create a Weight Training activity with the start time and duration above, then paste this into its description.</span></div>' +
+    '<textarea id="sumtext" class="sumtext" readonly>' + esc(stravaText(rec)) + '</textarea>' +
+    '<div class="row"><button class="btn primary" data-act="copy">Copy for Strava</button>' + (DL || !IN_ARTIFACT ? '<button class="btn" data-act="csv">Download CSV</button>' : '') + '</div></div>';
+  var doneIt = PROGRAM[rec.day].items.filter(function(it){ return rec.sets[it.id]; });
+  if (S.editing){
+    h += '<div class="card"><div><h3>Edit weights</h3><span class="muted" style="font-size:14px">' + esc(PROGRAM[rec.day].label + ', ' + fmtDate(rec.started)) + '</span></div>' + doneIt.map(function(it){
+      return '<div class="ex"><b>' + it.no + '. ' + esc(it.name) + '</b>' + setGrid(rec.sets[it.id].map(function(x, i){ return { i: i, scope: 'h', ex: it.id, reps: x.reps, kg: x.kg, status: fmtTime(x.at) }; })) + '</div>';
+    }).join('<div class="divider"></div>') + '<div class="row"><button class="btn primary" data-act="editsave">Save changes</button><button class="btn" data-act="editcancel">Cancel</button></div></div>';
+  } else {
+    h += '<div class="card slist">' + doneIt.map(function(it){
+      return '<div class="sitem"><b>' + it.no + '. ' + esc(it.name) + '</b>' + rec.sets[it.id].map(function(x, i){ return '<span class="l">' + esc(setLine(x, i)) + '</span>'; }).join('') + '</div>';
+    }).join('') + '<button class="btn" data-act="edit" style="align-self:flex-start">Edit weights</button></div>';
+  }
+  if (fromHist){
+    h += S.confirmDel ? '<div class="card confirm"><b>Delete this workout from your history?</b><div class="row"><button class="btn danger" data-act="delrec">Delete</button><button class="btn" data-act="nodel">Keep it</button></div></div>'
+      : '<button class="link" data-act="askdel" style="color:var(--danger);align-self:center">Delete this workout</button>';
+  } else h += '<button class="btn block" data-act="home" style="margin-bottom:16px">Done</button>';
+  return h;
+}
+
+function viewHistory(){
+  var h = topBar('History', 'home');
+  if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a Lower 1 or Lower 2 session and it shows up here with its weights and times.</span></div>';
+  hist().forEach(function(rec){
+    h += '<button class="card hist" data-act="open" data-id="' + rec.id + '"><span><b>' + PROGRAM[rec.day].name + '</b> <span class="muted">' + PROGRAM[rec.day].label + '</span><br><span class="muted" style="font-size:14px">' + fmtDate(rec.started) + ' · ' + fmtTime(rec.started) + '</span></span>' +
+      '<span class="muted num" style="font-size:14px;text-align:right">' + setCount(rec) + ' sets<br>' + volume(rec).toLocaleString() + ' kg</span></button>';
+  });
+  return h + '<div class="note" id="syncnote">' + esc(syncText()) + '</div>';
+}
+
+function refreshBtn(){
+  return '<button class="iconbtn" data-act="refresh" aria-label="Refresh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></button>';
+}
+function ctxNow(){
+  var c = { view: S.view, screen: innerWidth + 'x' + innerHeight, app: APP_VERSION };
+  if (W && S.view === 'focus'){ var st = stepsOf()[W.cur], it = exById(st.ex);
+    c.workout = PROGRAM[W.day].name; c.exercise = it.no + ' ' + it.name; c.set = st.set + 1;
+    c.phase = W.rest ? 'resting' : W.blockDone ? 'exercise finished' : 'doing set'; }
+  else if (S.view === 'day') c.workout = PROGRAM[S.day].name;
+  else if (S.view === 'summary' && S.rec) c.workout = PROGRAM[S.rec.day].name + ' summary';
+  return c;
+}
+function ctxText(c){
+  var v = { home: 'Home', day: 'Exercise list', focus: 'Workout', summary: 'Summary', history: 'History', settings: 'Settings' }[c.view] || c.view;
+  return [v, c.workout, c.exercise, c.set ? 'set ' + c.set : '', c.phase].filter(Boolean).join(' · ');
+}
+function viewSheet(){
+  return '<div class="sheetbg" data-act="fbclose"></div><div class="sheet" role="dialog" aria-label="Note for Claude"><h3>Note for Claude</h3>' +
+    '<div class="ctx">Screen: ' + esc(ctxText(S.fbctx)) + '</div>' +
+    '<textarea id="fbtext" placeholder="What went wrong or what should change?"></textarea>' +
+    '<div class="row"><button class="btn primary" data-act="fbsave">Save note</button><button class="btn" data-act="fbclose">Cancel</button></div></div>';
+}
+function openNotes(){ return FEEDBACK.filter(function(f){ return f.status !== 'fixed' && !f.deleted; }); }
+function updFab(){ var n = openNotes().length, b = $('fabn'); b.hidden = !n; b.textContent = n; $('fab').hidden = !$('sheet').hidden; }
+function viewSettings(){
+  var h = topBar('Settings', 'home', refreshBtn());
+  h += '<section class="card"><div><h3>Backup and notes</h3><div class="note sync" id="syncnote" style="text-align:left;padding:0">' + esc(syncText()) + '</div></div>';
+  if (!GIST_ID) h += '<span class="muted">Backup is not set up in this version.</span>';
+  else if (TOKEN) h += '<span class="muted" style="font-size:14px">A GitHub token is saved on this phone. Your workouts and notes go to your secret Gist automatically.</span>' +
+    '<div class="row"><button class="btn primary" data-act="syncnow">Sync now</button><button class="btn danger" data-act="tokdel">Remove token</button></div>';
+  else h += '<ol class="steps"><li>On github.com go to Settings, Developer settings, Fine-grained tokens, Generate new token.</li><li>Name it "Lower Body Log", pick an expiry, and under Account permissions set <b>Gists</b> to Read and write. Nothing else.</li><li>Copy the token and paste it below. It stays on this phone. Don\'t send it to anyone, including Claude.</li></ol>' +
+    '<input id="tok" class="field" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub token">' +
+    '<button class="btn primary" data-act="toksave">Save token</button>';
+  h += '</section>';
+  var notes = FEEDBACK.filter(function(f){ return !f.deleted; });
+  h += '<section class="card"><div><h3>Notes for Claude</h3><span class="muted" style="font-size:14px">Use the bug button on any screen. ' + (TOKEN ? 'Notes sync to your Gist; tell Claude "fix feedback" after your session.' : 'Without a token, copy them and paste into your chat with Claude.') + '</span></div>';
+  if (!notes.length) h += '<span class="muted">No notes yet.</span>';
+  notes.forEach(function(f){
+    h += '<div class="fbitem' + (f.status === 'fixed' ? ' fixed' : '') + '"><span class="ref">' + fmtDate(f.at) + ' ' + fmtTime(f.at) + ' · ' + esc(ctxText(f.ctx || {})) + (f.status === 'fixed' ? ' · fixed' : '') + '</span><span>' + esc(f.text) + '</span>' +
+      (f.reply ? '<span class="ref">Claude: ' + esc(f.reply) + '</span>' : '') + '</div>';
+  });
+  if (notes.length) h += '<button class="btn" data-act="fbcopy">Copy all notes</button>';
+  h += '</section><div class="note">Version ' + APP_VERSION + '</div>';
+  return h;
+}
+
+function render(){
+  if (S.view === 'focus' && !W) S.view = 'home';
+  var v = { home: viewHome, day: viewDay, focus: viewFocus, summary: viewSummary, history: viewHistory, settings: viewSettings }[S.view]();
+  $('app').innerHTML = v;
+  updFab();
+  tick();
+}
+/* ===================== /VIEW ===================== */
+
+/* ===================== TIMERS, SOUND, WAKE LOCK ===================== */
+var AC = null;
+function unlockAudio(){ try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch(e){} }
+function beep(n){
+  try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch(e){}
+  if (!AC) return;
+  try { for (var i = 0; i < n; i++){ var o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + i * 0.28;
+    o.frequency.value = 880; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); o.start(t); o.stop(t + 0.22); } } catch(e){}
+}
+function tick(){
+  if (!W || S.view !== 'focus') return;
+  var now = Date.now();
+  if (W.rest){
+    var left = Math.max(0, (W.rest.until - now) / 1000);
+    if (left <= 0) return endRest();
+    var s = Math.ceil(left), el = $('rtime'), ring = $('rring');
+    if (el) el.textContent = Math.floor(s / 60) + ':' + pad(s % 60);
+    if (ring) ring.setAttribute('stroke-dashoffset', String(276.5 * (1 - left / W.rest.total)));
+  }
+  if (W.hold){
+    var hl = Math.max(0, Math.ceil((W.hold.until - now) / 1000));
+    if (hl <= 0){ W.hold = null; saveActive(); beep(3); toast('Hold done. Tap Done set.'); render(); return; }
+    var he = $('htime'); if (he) he.textContent = '0:' + pad(hl);
+  }
+}
+setInterval(tick, 250);
+var lock = null;
+function wake(){ try { if (navigator.wakeLock && !lock) navigator.wakeLock.request('screen').then(function(l){ lock = l; l.addEventListener('release', function(){ lock = null; }); }).catch(function(){}); } catch(e){} }
+function unwake(){ try { lock && lock.release(); } catch(e){} lock = null; }
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && W && S.view === 'focus'){ wake(); tick(); } });
+
+var tT = null;
+function toast(msg){ var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(tT); tT = setTimeout(function(){ t.hidden = true; }, 2200); }
+
+/* ===================== EVENTS ===================== */
+document.addEventListener('click', function(e){
+  var el = e.target.closest('[data-act]'); if (!el) return;
+  unlockAudio();
+  var a = el.getAttribute('data-act');
+  var go = function(v){ S.view = v; S.confirm = false; S.confirmDel = false; S.editing = false; render(); scrollTo(0, 0); };
+  switch (a){
+    case 'home': unwake(); go('home'); break;
+    case 'history': go('history'); break;
+    case 'settings': go('settings'); break;
+    case 'refresh':
+      toast('Refreshing…'); saveActive();
+      var reload = function(){ location.replace(location.pathname + '?r=' + Date.now() + location.hash); };
+      (TOKEN && GIST_ID ? gistPush() : Promise.resolve()).then(reload, reload); break;
+    case 'syncnow': gistPull().then(gistPush); break;
+    case 'toksave': var tv = ($('tok').value || '').trim(); if (!tv) { toast('Paste the token first'); break; }
+      TOKEN = tv; lsSet('lbl.token', TOKEN); SYNC.pulled = false; render();
+      gistPull().then(function(){ if (SYNC.state === 'ok'){ toast('Connected to your Gist'); gistPush(); } else toast(syncText()); render(); }); break;
+    case 'tokdel': TOKEN = ''; lsSet('lbl.token', null); SYNC.state = ''; render(); toast('Token removed from this phone'); break;
+    case 'fbopen': S.fbctx = ctxNow(); $('sheet').innerHTML = viewSheet(); $('sheet').hidden = false; updFab(); setTimeout(function(){ $('fbtext').focus(); }, 50); break;
+    case 'fbclose': $('sheet').hidden = true; $('sheet').innerHTML = ''; updFab(); break;
+    case 'fbsave': var ft = ($('fbtext').value || '').trim(); if (!ft) { toast('Type a note first'); break; }
+      FEEDBACK.unshift({ id: 'f' + Date.now(), at: Date.now(), updated: Date.now(), text: ft, ctx: S.fbctx, status: 'open' });
+      lsSet('lbl.feedback', FEEDBACK); schedulePush();
+      $('sheet').hidden = true; $('sheet').innerHTML = ''; updFab();
+      toast(TOKEN && GIST_ID ? 'Note saved for Claude' : 'Note saved on this phone');
+      if (S.view === 'settings') render(); break;
+    case 'fbcopy':
+      var all = FEEDBACK.filter(function(f){ return !f.deleted && f.status !== 'fixed'; }).map(function(f){ return '- [' + fmtDate(f.at) + ' ' + fmtTime(f.at) + ' · ' + ctxText(f.ctx || {}) + '] ' + f.text; }).join('\n');
+      try { navigator.clipboard.writeText('Feedback on Lower Body Log:\n' + all).then(function(){ toast('Notes copied'); }, function(){ toast('Could not copy here'); }); } catch(err){ toast('Could not copy here'); }
+      break;
+    case 'edit': S.rec = JSON.parse(JSON.stringify(S.rec)); S.editing = true; render(); break;
+    case 'editcancel': var oid = S.rec.id; S.rec = HIST.filter(function(h){ return h.id === oid; })[0]; S.editing = false; render(); break;
+    case 'editsave': S.rec.updated = Date.now(); backend.put(S.rec).catch(function(){}); S.editing = false; render(); toast('Changes saved'); break;
+    case 'day': S.day = el.getAttribute('data-day'); go('day'); break;
+    case 'start': startWorkout(S.day); scrollTo(0, 0); break;
+    case 'resume': wake(); go('focus'); break;
+    case 'done': doneSet(); break;
+    case 'plus30': if (W.rest){ W.rest.until += 30000; W.rest.total += 30; saveActive(); tick(); } break;
+    case 'skiprest': endRest(true); break;
+    case 'hold': W.hold = { until: Date.now() + (FAST ? 3 : exById(stepsOf()[W.cur].ex).hold) * 1000 }; saveActive(); render(); break;
+    case 'holdstop': W.hold = null; saveActive(); render(); break;
+    case 'nextex': gotoBlock(stepsOf()[W.cur].b + 1); break;
+    case 'skipex': gotoBlock(stepsOf()[W.cur].b + 1); break;
+    case 'prevex': gotoBlock(stepsOf()[W.cur].b - 1); break;
+    case 'end': S.confirm = true; render(); scrollTo(0, 0); break;
+    case 'keep': S.confirm = false; render(); break;
+    case 'finish': finishWorkout(); break;
+    case 'discard': W = null; saveActive(); unwake(); go('home'); toast('Workout discarded'); break;
+    case 'open': S.rec = HIST.filter(function(h){ return h.id === el.getAttribute('data-id'); })[0]; S.fromHist = true; S.saved = ''; go('summary'); break;
+    case 'askdel': S.confirmDel = true; render(); break;
+    case 'nodel': S.confirmDel = false; render(); break;
+    case 'delrec': backend.del(S.rec.id).catch(function(){}); go('history'); toast('Workout deleted'); break;
+    case 'copy':
+      var txt = stravaText(S.rec), ta = $('sumtext');
+      var fallback = function(){ ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length); toast('Text selected. Tap Copy.'); };
+      try { navigator.clipboard.writeText(txt).then(function(){ toast('Copied. Paste it into your Strava activity.'); }, fallback); } catch(err){ fallback(); }
+      break;
+    case 'csv':
+      var data = csv(S.rec), name = fileName(S.rec, 'csv');
+      if (DL) DL.save({ filename: name, data: data }).then(function(){ toast('CSV saved'); }, function(err){ if (err && err.code !== 'declined') toast('Could not save the CSV here'); });
+      else { var u = URL.createObjectURL(new Blob([data], { type: 'text/csv' })), lk = document.createElement('a'); lk.href = u; lk.download = name; document.body.appendChild(lk); lk.click(); lk.remove(); setTimeout(function(){ URL.revokeObjectURL(u); }, 2000); }
+      break;
+  }
+});
+document.addEventListener('input', function(e){
+  var el = e.target; if (!el.hasAttribute || !el.hasAttribute('data-in')) return;
+  var ex = el.getAttribute('data-ex'), i = +el.getAttribute('data-i'), f = el.getAttribute('data-f'), v = el.value.trim().replace(',', '.');
+  if (el.getAttribute('data-in') === 'plan'){
+    PLAN[S.day] = PLAN[S.day] || {}; PLAN[S.day][ex] = PLAN[S.day][ex] || [];
+    PLAN[S.day][ex][i] = PLAN[S.day][ex][i] || {}; PLAN[S.day][ex][i][f] = v; lsSet(KEY_PLAN, PLAN);
+  } else if (el.getAttribute('data-in') === 'h'){ if (S.rec && S.editing) S.rec.sets[ex][i][f] = v; }
+  else if (W){ W.sets[ex][i][f] = v; saveActive(); }
+});
+
+if (W){ S.view = 'focus'; wake(); }
+render();
+gistPull();
+document.addEventListener('visibilitychange', function(){ if (!document.hidden && S.view !== 'focus' && Date.now() - SYNC.at > 60000) gistPull(); });
+</script>
+
+</body>
+</html>
