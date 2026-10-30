@@ -218,7 +218,7 @@ var PROGRAM = {
 var SUPERSET_REST = 120;
 /* ===================== /PROGRAM ===================== */
 
-var APP_VERSION = '5';
+var APP_VERSION = '6';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -277,7 +277,8 @@ var HIST = lsGet(KEY_HIST, []);           // finished workouts (mirrored to clau
 var cloud = null, DL = null;
 var TOKEN = lsGet('lbl.token', '');
 var FEEDBACK = lsGet('lbl.feedback', []);   // notes from the bug button
-function hist(){ return HIST.filter(function(h){ return !h.deleted; }); }
+function hist(){ return HIST.filter(function(h){ return !h.deleted && !h.archived; }); }
+function archivedHist(){ return HIST.filter(function(h){ return !h.deleted && h.archived; }); }
 function stamp(rec){
   // readable date + day on every record, so the Gist copy makes sense on its own
   var d = new Date(rec.started);
@@ -440,6 +441,21 @@ function gotoBlock(bi){
   if (idx < 0) return finishWorkout();
   W.cur = idx; W.rest = null; W.hold = null; W.blockDone = false; saveActive(); render(); scrollTo(0, 0);
 }
+function workoutRecord(){
+  var sets = {};
+  Object.keys(W.sets).forEach(function(k){
+    var done = W.sets[k].filter(function(x){ return x.at; });
+    if (done.length) sets[k] = done;
+  });
+  var ats = []; Object.keys(sets).forEach(function(k){ sets[k].forEach(function(x){ ats.push(x.at); }); });
+  return { id: W.id, day: W.day, started: W.started, ended: ats.length ? Math.max.apply(null, ats) : Date.now(), sets: sets };
+}
+function archiveWorkout(){
+  var rec = workoutRecord();
+  W = null; saveActive(); unwake();
+  if (Object.keys(rec.sets).length){ rec.archived = true; rec.trial = true; backend.put(rec).catch(function(){}); return true; }
+  return false;
+}
 function finishWorkout(){
   var sets = {};
   Object.keys(W.sets).forEach(function(k){
@@ -585,7 +601,7 @@ function viewFocus(){
   if (S.confirm){
     h += '<div class="card confirm"><b>Finish this workout now?</b><span class="muted">Sets you have marked done go into the summary.</span><div class="row">' +
       '<button class="btn primary" data-act="finish">Finish and see summary</button><button class="btn" data-act="keep">Keep going</button></div>' +
-      '<button class="link" data-act="discard" style="color:var(--danger);align-self:flex-start">Discard without saving</button></div>';
+      '<button class="link" data-act="discard" style="color:var(--danger);align-self:flex-start">It was a trial, move it to the archive</button></div>';
   }
   h += '<div class="eyebrow">Exercise ' + (st.b + 1) + ' of ' + bl.length + (b.superset ? ' · Superset ' + b.n + ' · Round ' + (st.set + 1) + ' of ' + b.sets : '') + '</div>';
   if (b.superset){
@@ -653,21 +669,30 @@ function viewSummary(){
       return '<div class="sitem"><b>' + it.no + '. ' + esc(it.name) + '</b>' + rec.sets[it.id].map(function(x, i){ return '<span class="l">' + esc(setLine(x, i)) + '</span>'; }).join('') + '</div>';
     }).join('') + '<button class="btn" data-act="edit" style="align-self:flex-start">Edit weights</button></div>';
   }
-  if (fromHist){
-    h += S.confirmDel ? '<div class="card confirm"><b>Delete this workout from your history?</b><div class="row"><button class="btn danger" data-act="delrec">Delete</button><button class="btn" data-act="nodel">Keep it</button></div></div>'
-      : '<button class="link" data-act="askdel" style="color:var(--danger);align-self:center">Delete this workout</button>';
+  if (fromHist && rec.archived){
+    h += '<div class="callout">This workout is in the archive. It stays in your backup but is hidden from History and from your last-time weights.</div>' +
+      '<button class="btn" data-act="unarchive">Restore to history</button>';
+  } else if (fromHist){
+    h += S.confirmDel ? '<div class="card confirm"><b>Move this workout to the archive?</b><span class="muted">It disappears from History and from your last-time weights, but stays in your backup. You can restore it from the archive.</span><div class="row"><button class="btn danger" data-act="delrec">Move to archive</button><button class="btn" data-act="nodel">Keep it</button></div></div>'
+      : '<button class="link" data-act="askdel" style="color:var(--danger);align-self:center">Move to archive</button>';
   } else h += '<button class="btn block" data-act="home" style="margin-bottom:16px">Done</button>';
   return h;
 }
 
+function histRow(rec){
+  return '<button class="card hist" data-act="open" data-id="' + rec.id + '"><span><b>' + PROGRAM[rec.day].name + '</b> <span class="muted">' + PROGRAM[rec.day].label + (rec.trial ? ' · trial' : '') + '</span><br><span class="muted" style="font-size:14px">' + fmtDate(rec.started) + ' · ' + fmtTime(rec.started) + '</span></span>' +
+    '<span class="muted num" style="font-size:14px;text-align:right">' + setCount(rec) + ' sets<br>' + volume(rec).toLocaleString() + ' kg</span></button>';
+}
 function viewHistory(){
-  var h = topBar('History', 'home');
-  if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a Lower 1 or Lower 2 session and it shows up here with its weights and times.</span></div>';
+  var h = topBar('History', 'home'), arch = archivedHist();
+  var archBlock = !arch.length ? '' : '<button class="link" data-act="togglearch" style="align-self:center">' + (S.showArch ? 'Hide' : 'Show') + ' archive (' + arch.length + ')</button>' +
+    (S.showArch ? '<div class="eyebrow">Archive</div>' + arch.map(histRow).join('') : '');
+  if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a Lower 1 or Lower 2 session and it shows up here with its weights and times.</span></div>' + archBlock;
   hist().forEach(function(rec){
     h += '<button class="card hist" data-act="open" data-id="' + rec.id + '"><span><b>' + PROGRAM[rec.day].name + '</b> <span class="muted">' + PROGRAM[rec.day].label + '</span><br><span class="muted" style="font-size:14px">' + fmtDate(rec.started) + ' · ' + fmtTime(rec.started) + '</span></span>' +
       '<span class="muted num" style="font-size:14px;text-align:right">' + setCount(rec) + ' sets<br>' + volume(rec).toLocaleString() + ' kg</span></button>';
   });
-  return h + '<div class="note" id="syncnote">' + esc(syncText()) + '</div>';
+  return h + archBlock + '<div class="note" id="syncnote">' + esc(syncText()) + '</div>';
 }
 
 function refreshBtn(){
@@ -742,7 +767,8 @@ function viewNotes(){
   var h = topBar('Notes for Claude', 'home', refreshBtn());
   h += '<div class="seg" role="group" aria-label="Filter notes">' + [['open', 'Open'], ['approved', 'Approved'], ['fixed', 'To check'], ['closed', 'Closed']].map(function(x){
     return '<button data-act="nfilter" data-f="' + x[0] + '" aria-pressed="' + (S.nf === x[0]) + '">' + x[1] + ' ' + counts[x[0]] + '</button>'; }).join('') + '</div>';
-  if (counts.approved) h += '<div class="callout"><b>' + counts.approved + ' approved.</b> When you\'re ready, send Claude <b>"fix feedback"</b> from the Claude app. Fixes come back here under To check.</div>';
+  if (counts.approved) h += '<div class="callout"><b>' + counts.approved + ' approved.</b> Tap the button to copy <b>"fix feedback"</b> and open Claude, then paste it into the Lower Body Log session. Fixes come back here under To check.' +
+    '<a class="btn primary block" style="margin-top:10px" href="https://claude.ai/code" target="_blank" rel="noopener" data-act="askfix">Ask Claude to fix (' + counts.approved + ')</a></div>';
   if (!TOKEN) h += '<div class="callout">Notes stay on this phone until you add your GitHub token in Settings. Without it, Claude can\'t see them.</div>';
   if (S.nf === 'open'){
     h += '<div class="nactions"><button class="btn" data-act="nnew">Add a note</button>' + (counts.open ? '<button class="btn primary" data-act="napproveall">Approve all ' + counts.open + '</button>' : '') + '</div>';
@@ -907,11 +933,14 @@ document.addEventListener('click', function(e){
     case 'end': S.confirm = true; render(); scrollTo(0, 0); break;
     case 'keep': S.confirm = false; render(); break;
     case 'finish': finishWorkout(); break;
-    case 'discard': W = null; saveActive(); unwake(); go('home'); toast('Workout discarded'); break;
+    case 'discard': var kept = archiveWorkout(); go('home'); toast(kept ? 'Moved to the archive' : 'Workout discarded, no sets were done'); break;
+    case 'togglearch': S.showArch = !S.showArch; render(); break;
+    case 'unarchive': S.rec.archived = false; S.rec.updated = Date.now(); backend.put(S.rec).catch(function(){}); render(); toast('Restored to history'); break;
+    case 'askfix': try { navigator.clipboard.writeText('fix feedback').then(function(){ toast('Copied "fix feedback"'); }, function(){}); } catch(err){} break;
     case 'open': S.rec = HIST.filter(function(h){ return h.id === el.getAttribute('data-id'); })[0]; S.fromHist = true; S.saved = ''; go('summary'); break;
     case 'askdel': S.confirmDel = true; render(); break;
     case 'nodel': S.confirmDel = false; render(); break;
-    case 'delrec': backend.del(S.rec.id).catch(function(){}); go('history'); toast('Workout deleted'); break;
+    case 'delrec': S.rec.archived = true; S.rec.updated = Date.now(); backend.put(S.rec).catch(function(){}); go('history'); toast('Moved to the archive'); break;
     case 'copy':
       var txt = stravaText(S.rec), ta = $('sumtext');
       var fallback = function(){ ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length); toast('Text selected. Tap Copy.'); };
