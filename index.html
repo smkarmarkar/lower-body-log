@@ -218,7 +218,7 @@ var PROGRAM = {
 var SUPERSET_REST = 120;
 /* ===================== /PROGRAM ===================== */
 
-var APP_VERSION = '4';
+var APP_VERSION = '5';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -327,9 +327,9 @@ function gistPull(){
     if (S.view !== 'focus') render();
   }).catch(function(e){ SYNC.state = (e === 401 || e === 403 || e === 404) ? 'auth' : 'offline'; updSync(); });
 }
-function schedulePush(){ if (!GIST_ID || !TOKEN) return; clearTimeout(pushT); pushT = setTimeout(gistPush, 1200); }
+function schedulePush(){ if (!TOKEN) return; clearTimeout(pushT); pushT = setTimeout(gistPush, 1200); }
 function gistPush(){
-  if (!GIST_ID || !TOKEN) return Promise.resolve();
+  if (!TOKEN) return Promise.resolve();
   // never overwrite the Gist before we've merged what is already in it
   return (SYNC.pulled ? Promise.resolve() : gistPull()).then(function(){
     if (!SYNC.pulled) return;
@@ -505,12 +505,16 @@ function fileName(rec, ext){ var d = new Date(rec.started); return PROGRAM[rec.d
 /* ===================== VIEW =====================
    Small template functions; restyle here without touching state or timers. */
 var ICON = {
+  home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
 };
 function topBar(title, backAct, right){
-  return '<div class="top">' + (backAct ? '<button class="iconbtn" data-act="' + backAct + '" aria-label="Back">' + ICON.back + '</button>' : '<span></span>') +
+  var left = !backAct ? '<span></span>' : backAct === 'home'
+    ? '<button class="iconbtn" data-act="home" aria-label="Home">' + ICON.home + '</button>'
+    : '<span class="topright"><button class="iconbtn" data-act="' + backAct + '" aria-label="Back">' + ICON.back + '</button><button class="iconbtn" data-act="home" aria-label="Home">' + ICON.home + '</button></span>';
+  return '<div class="top">' + left +
     '<div style="flex:1;min-width:0;text-align:center"><h3>' + esc(title) + '</h3></div>' + (right || '<span style="width:44px"></span>') + '</div>';
 }
 function chips(it, withRest){
@@ -700,8 +704,7 @@ function updFab(){ var n = openNotes().length, b = $('fabn'); b.hidden = !n; b.t
 function viewSettings(){
   var h = topBar('Settings', 'home', refreshBtn());
   h += '<section class="card"><div><h3>Backup and notes</h3><div class="note sync" id="syncnote" style="text-align:left;padding:0">' + esc(syncText()) + '</div></div>';
-  if (!GIST_ID) h += '<span class="muted">Backup is not set up in this version.</span>';
-  else if (TOKEN) h += '<span class="muted" style="font-size:14px">A GitHub token is saved on this phone. Your workouts and notes go to your secret Gist automatically.</span>' +
+  if (TOKEN) h += '<span class="muted" style="font-size:14px">A GitHub token is saved on this phone. Your workouts and notes go to your secret Gist automatically.</span>' +
     '<div class="row"><button class="btn primary" data-act="syncnow">Sync now</button><button class="btn danger" data-act="tokdel">Remove token</button></div>';
   else h += '<ol class="steps"><li>On github.com go to Settings, Developer settings, Fine-grained tokens, Generate new token.</li><li>Name it "Lower Body Log", pick an expiry, and under Account permissions set <b>Gists</b> to Read and write. Nothing else.</li><li>Copy the token and paste it below. It stays on this phone. Don\'t send it to anyone, including Claude.</li></ol>' +
     '<input id="tok" class="field" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub token">' +
@@ -867,8 +870,9 @@ document.addEventListener('click', function(e){
     case 'ndelyes': var nx = noteById(el.getAttribute('data-id')); if (nx){ nx.deleted = true; touchNote(nx); } S.ndel = null; render(); toast('Note deleted'); break;
     case 'refresh':
       toast('Refreshing…'); saveActive();
+      try { sessionStorage.setItem('lbl.return', JSON.stringify({ view: S.view, day: S.day, nf: S.nf, rec: S.view === 'summary' && S.rec ? S.rec.id : null, fromHist: S.fromHist })); } catch(e){}
       var reload = function(){ location.replace(location.pathname + '?r=' + Date.now() + location.hash); };
-      (TOKEN && GIST_ID ? gistPush() : Promise.resolve()).then(reload, reload); break;
+      (TOKEN ? gistPush() : Promise.resolve()).then(reload, reload); break;
     case 'syncnow': gistPull().then(gistPush); break;
     case 'toksave': var tv = ($('tok').value || '').trim(); if (!tv) { toast('Paste the token first'); break; }
       TOKEN = tv; lsSet('lbl.token', TOKEN); SYNC.pulled = false; render();
@@ -880,7 +884,7 @@ document.addEventListener('click', function(e){
       FEEDBACK.unshift({ id: 'f' + Date.now(), at: Date.now(), updated: Date.now(), text: ft, ctx: S.fbctx, status: 'open' });
       lsSet('lbl.feedback', FEEDBACK); schedulePush();
       $('sheet').hidden = true; $('sheet').innerHTML = ''; updFab();
-      toast(TOKEN && GIST_ID ? 'Note saved for Claude' : 'Note saved on this phone');
+      toast(TOKEN ? 'Note saved for Claude' : 'Note saved on this phone');
       if (S.view === 'notes' || S.view === 'home') render(); break;
     case 'fbcopy':
       var all = openNotes().map(function(f){ return '- [' + fmtDate(f.at) + ' ' + fmtTime(f.at) + ' · ' + ctxText(f.ctx || {}) + '] ' + f.text; }).join('\n');
@@ -930,7 +934,16 @@ document.addEventListener('input', function(e){
   else if (W){ W.sets[ex][i][f] = v; saveActive(); }
 });
 
-if (W){ S.view = 'focus'; wake(); }
+(function restoreView(){
+  var r = null;
+  try { r = JSON.parse(sessionStorage.getItem('lbl.return')); sessionStorage.removeItem('lbl.return'); } catch(e){}
+  if (!r) return;
+  S.day = r.day || S.day; S.nf = r.nf || null; S.fromHist = r.fromHist;
+  if (r.view === 'summary'){ S.rec = HIST.filter(function(h){ return h.id === r.rec; })[0]; if (!S.rec) return; }
+  if (r.view === 'focus' && !W) return;
+  S.view = r.view || 'home';
+  if (S.view === 'focus') wake();
+})();
 render();
 gistPull();
 document.addEventListener('visibilitychange', function(){ if (!document.hidden && S.view !== 'focus' && Date.now() - SYNC.at > 60000) gistPull(); });
