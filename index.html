@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
-<title>Lower Body Log</title>
+<title>Strength Log</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -208,6 +208,8 @@ button{font:inherit;color:inherit}
 .nactions{display:flex;gap:8px;flex-wrap:wrap}
 .nactions .btn{min-height:42px;font-size:15px;padding:0 16px}
 textarea.field{min-height:96px;resize:vertical}
+.warm summary{cursor:pointer;list-style-position:outside}
+.warm{gap:8px}
 .callout{background:color-mix(in srgb,var(--accent) 12%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:var(--r-md);padding:12px 14px;font-size:14.5px}
 @media (max-width:360px){.card{padding:14px}.sets input{font-size:18px;padding:0 8px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -220,26 +222,52 @@ textarea.field{min-height:96px;resize:vertical}
 
 <script>
 /* ===================== PROGRAM =====================
-   From "lower sk.xlsx". Same number with letters (6A, 6B) = superset.
-   tempo "311" = 3s lowering, 1s pause, 1s lifting. hold = seconds for timed holds. */
+   Phase 1, Hypertrophy, from Coach Deba Pt. Gogoi ("sandeep sir.pdf"). Videos from "lower sk.xlsx" where one exists.
+   Same number with letters (6A, 6B) = superset, done back to back. The coach's A1/A2 groups map to 7A/7B and so on.
+   tempo "311" = 3s lowering, 1s pause, 1s lifting. hold = seconds for timed holds. rir = reps in reserve.
+   Sets: the coach's 3,3,3,2 weekly column is ignored for now; main lifts get 3 sets, core and carries 2.
+   d1 and d2 keep their old keys so past Lower 1 / Lower 2 workouts still line up. */
+var PROGRAM_REV = 2;   // bump when the program below changes, so old in-app edits don't override it
+var DAYS = ['u1', 'd1', 'u2', 'd2'];
 var PROGRAM = {
-  d1: { label: 'Day 1', name: 'Lower 1', items: [
-    { no:'1',  id:'goblet-squat',   name:'DB Goblet Squat',              reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/K2TumOeks2A' },
-    { no:'2',  id:'db-rdl',         name:'DB Romanian Deadlift',         reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/CBOhr6H7BEY' },
-    { no:'3',  id:'cossack-squat',  name:'Cossack Squat',                reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/XvJ8gtW30ZA' },
-    { no:'4',  id:'sl-smith-calf',  name:'Single-Leg Smith Calf Raise',  reps:'10',     sets:2, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/GoNhkc7ZVVc' },
-    { no:'5',  id:'sl-glute-bridge',name:'Single-Leg Glute Bridge',      reps:'10',     sets:2, tempo:'',      rest:60,  url:'https://youtube.com/shorts/RNMIy5Q5XBY' },
-    { no:'6A', id:'copenhagen-plank',name:'Copenhagen Plank',            reps:'30 sec', sets:2, tempo:'ISO',   rest:120, url:'https://youtube.com/shorts/Ua7YHHOWRlA', hold:30 },
-    { no:'6B', id:'farmers-carry',  name:'Farmers Carry',                reps:'8',      sets:2, tempo:'CONTR.',rest:120, url:'https://youtube.com/shorts/Ozp9nI_w4xo' }
+  u1: { label: 'Session 1', name: 'Upper 1', warmup: 'Cat-camel x 10, book opener x 10 each, roller back extension x 10, shoulder circumduction x 10, prone W raise x 10, scapular push-up x 10, shoulder external rotation x 10 each', items: [
+    { no:'1',  id:'db-shoulder-press', name:'DB Shoulder Press',          reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
+    { no:'2',  id:'incline-chest-press',name:'Incline Chest Press',       reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
+    { no:'3',  id:'db-arnold-press',   name:'DB Arnold Press',            reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
+    { no:'4',  id:'db-lateral-raise',  name:'DB Lateral Raise',           reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
+    { no:'5',  id:'rope-extension',    name:'Rope Extension',             reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
+    { no:'6',  id:'db-oh-tricep-ext',  name:'DB Overhead Tricep Extension',reps:'8',     sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
+    { no:'7A', id:'tall-knee-pallof',  name:'Tall-Kneeling Pallof Press', reps:'30 sec', sets:2, tempo:'',    rir:'',    rest:60, url:'', hold:30 },
+    { no:'7B', id:'ab-crunch',         name:'Abdominal Crunches',         reps:'20',     sets:2, tempo:'',    rir:'',    rest:60, url:'' }
   ]},
-  d2: { label: 'Day 2', name: 'Lower 2', items: [
-    { no:'1',  id:'sl-hip-thrust',  name:'DB Single-Leg Hip Thrust',     reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/bRZeB6UG6Js' },
-    { no:'2',  id:'split-squat',    name:'DB Split Squat',               reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/sw4MzpC8l58' },
-    { no:'3',  id:'ham-curl',       name:'Machine Hamstring Curl',       reps:'8',      sets:3, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/kYx9uchpwVo' },
-    { no:'4',  id:'sl-seated-calf', name:'Single-Leg Seated Calf Raise', reps:'10',     sets:2, tempo:'311',   rest:60,  url:'https://youtube.com/shorts/0T0LtUAqPmU' },
-    { no:'5A', id:'sl-elev-plank',  name:'Single-Leg Elevated Plank',    reps:'30 sec', sets:2, tempo:'',      rest:120, url:'https://youtube.com/shorts/QfU2iZFeN-M', hold:30 },
-    { no:'5B', id:'wall-leg-lower', name:'Wall Press Leg Lower',         reps:'8 each', sets:2, tempo:'ISO',   rest:120, url:'https://youtu.be/XsdtPDgfRM4' },
-    { no:'5C', id:'suitcase-carry', name:'Suitcase Carry',               reps:'15 m',   sets:2, tempo:'CONTR.',rest:120, url:'https://youtube.com/shorts/iTjwbts8Djw' }
+  d1: { label: 'Session 2', name: 'Lower 1', warmup: 'Skipping x 100, cat-camel x 10, lateral hip rocker x 10, couch stretch x 10 each, supine hamstring / leg extension x 10 each, hip 90-90 get-up, single-leg glute bridge 5 sec x 10 each, single-leg wall sit 30 sec x 2 each, elbow plank 1 min', items: [
+    { no:'1',  id:'goblet-squat',   name:'DB Goblet Squat',              reps:'8',      sets:3, tempo:'211',   rir:'1-2', rest:90,  url:'https://youtube.com/shorts/K2TumOeks2A' },
+    { no:'2',  id:'db-rdl',         name:'DB Romanian Deadlift',         reps:'8',      sets:3, tempo:'211',   rir:'1-2', rest:90,  url:'https://youtube.com/shorts/CBOhr6H7BEY' },
+    { no:'3',  id:'cossack-squat',  name:'Cossack Squat',                reps:'8',      sets:3, tempo:'311',   rir:'2',   rest:90,  url:'https://youtube.com/shorts/XvJ8gtW30ZA' },
+    { no:'4',  id:'sl-smith-calf',  name:'Single-Leg Smith Calf Raise',  reps:'8',      sets:3, tempo:'311',   rir:'2',   rest:90,  url:'https://youtube.com/shorts/GoNhkc7ZVVc' },
+    { no:'5',  id:'sl-glute-bridge',name:'Single-Leg DB Glute Bridge (long lever)', reps:'10', sets:2, tempo:'', rir:'', rest:90, url:'https://youtube.com/shorts/RNMIy5Q5XBY' },
+    { no:'6A', id:'copenhagen-plank',name:'Copenhagen Plank',            reps:'20-30 sec', sets:2, tempo:'',   rir:'',    rest:90,  url:'https://youtube.com/shorts/Ua7YHHOWRlA', hold:30 },
+    { no:'6B', id:'wall-leg-lower', name:'Wall-Supported Leg Lower',     reps:'10',     sets:2, tempo:'',      rir:'',    rest:90,  url:'https://youtu.be/XsdtPDgfRM4' },
+    { no:'6C', id:'farmers-carry',  name:'Farmers Carry',                reps:'15 m',   sets:2, tempo:'',      rir:'',    rest:90,  url:'https://youtube.com/shorts/Ozp9nI_w4xo' }
+  ]},
+  u2: { label: 'Session 3', name: 'Upper 2', warmup: 'Cat-camel x 10, book opener x 10 each, roller back extension x 10, shoulder circumduction x 10, prone W raise x 10, scapular push-up x 10, shoulder external rotation x 10 each', items: [
+    { no:'1',  id:'bench-row',         name:'Bench-Supported Row',        reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
+    { no:'2',  id:'lat-pulldown',      name:'Lat Pulldown',               reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
+    { no:'3',  id:'wide-cable-row',    name:'Wide-Grip Cable Row',        reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
+    { no:'4',  id:'db-shrug',          name:'DB Shoulder Shrug',          reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
+    { no:'5A', id:'bb-bicep-curl',     name:'Barbell Bicep Curl',         reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
+    { no:'5B', id:'incline-db-curl',   name:'Incline DB Bicep Curl',      reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
+    { no:'6A', id:'tk-cable-rotation', name:'Tall-Kneeling Cable Rotation',reps:'10',    sets:2, tempo:'321', rir:'',    rest:60, url:'' },
+    { no:'6B', id:'supine-lat-crunch', name:'Supine Lateral Crunches',    reps:'15 each',sets:2, tempo:'321', rir:'',    rest:60, url:'' }
+  ]},
+  d2: { label: 'Session 4', name: 'Lower 2', warmup: 'Skipping x 100, cat-camel x 10, lateral hip rocker x 10, couch stretch x 10 each, supine hamstring / leg extension x 10 each, hip 90-90 get-up, single-leg glute bridge 5 sec x 10 each, single-leg wall sit 30 sec x 2 each, elbow plank 1 min', items: [
+    { no:'1',  id:'sl-hip-thrust',  name:'DB Single-Leg Hip Thrust',     reps:'8',      sets:3, tempo:'311',   rir:'1-2', rest:90,  url:'https://youtube.com/shorts/bRZeB6UG6Js' },
+    { no:'2',  id:'split-squat',    name:'DB Split Squat',               reps:'8 each', sets:3, tempo:'311',   rir:'1-2', rest:90,  url:'https://youtube.com/shorts/sw4MzpC8l58' },
+    { no:'3A', id:'ham-curl',       name:'Machine Hamstring Curl',       reps:'10',     sets:3, tempo:'311',   rir:'2',   rest:60,  url:'https://youtube.com/shorts/kYx9uchpwVo' },
+    { no:'3B', id:'sl-seated-calf', name:'Single-Leg Seated Calf Raise', reps:'10',     sets:3, tempo:'311',   rir:'2',   rest:60,  url:'https://youtube.com/shorts/0T0LtUAqPmU' },
+    { no:'4A', id:'sl-elev-plank',  name:'Single-Leg Elevated Plank',    reps:'30 sec', sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/QfU2iZFeN-M', hold:30 },
+    { no:'4B', id:'hip-flexion-hold',name:'Hip Flexion Hold (high plank)',reps:'30 sec',sets:2, tempo:'',      rir:'',    rest:60,  url:'', hold:30 },
+    { no:'4C', id:'suitcase-carry', name:'Suitcase Carry',               reps:'15 m',   sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/iTjwbts8Djw' }
   ]}
 };
 var SUPERSET_REST = 120;
@@ -250,43 +278,45 @@ var SUPERSET_REST = 120;
    Deleted exercises go to `gone` so past workouts can still name them. */
 var PROGRAM_ORIG = JSON.parse(JSON.stringify(PROGRAM));
 var PROG = (function(){ try { return JSON.parse(localStorage.getItem('lbl.program')) || null; } catch(e){ return null; } })();
+if (PROG && PROG.rev !== PROGRAM_REV) PROG.days = null;
 function applyProg(skipDay){
-  ['d1', 'd2'].forEach(function(dk){
+  DAYS.forEach(function(dk){
     if (dk === skipDay) return;   // never change the list under a workout in progress
-    PROGRAM[dk].items = PROG && PROG.days && PROG.days[dk] ? PROG.days[dk] : JSON.parse(JSON.stringify(PROGRAM_ORIG[dk].items));
+    PROGRAM[dk].items = PROG && PROG.days && PROG.days[dk] && PROG.rev === PROGRAM_REV ? PROG.days[dk] : JSON.parse(JSON.stringify(PROGRAM_ORIG[dk].items));
   });
 }
 applyProg();
 function saveProg(addGone){
   var gone = (PROG && PROG.gone) || {};
   if (addGone) Object.keys(addGone).forEach(function(k){ gone[k] = addGone[k]; });
-  PROG = { updated: Date.now(), days: { d1: PROGRAM.d1.items, d2: PROGRAM.d2.items }, gone: gone };
+  var days = {}; DAYS.forEach(function(dk){ days[dk] = PROGRAM[dk].items; });
+  PROG = { rev: PROGRAM_REV, updated: Date.now(), days: days, gone: gone };
   lsSet('lbl.program', PROG); schedulePush();
 }
 function resetProg(){
   var gone = (PROG && PROG.gone) || {};
-  ['d1', 'd2'].forEach(function(dk){ PROGRAM[dk].items.forEach(function(x){ gone[x.id] = x; }); });
-  PROG = { updated: Date.now(), days: null, gone: gone };
+  DAYS.forEach(function(dk){ PROGRAM[dk].items.forEach(function(x){ gone[x.id] = x; }); });
+  PROG = { rev: PROGRAM_REV, updated: Date.now(), days: null, gone: gone };
   lsSet('lbl.program', PROG); applyProg(); schedulePush();
 }
 function sortItems(items){ items.sort(function(a, b){ return (parseInt(a.no, 10) || 0) - (parseInt(b.no, 10) || 0) || String(a.no).localeCompare(String(b.no)); }); }
 function nextNo(dk){ var m = 0; PROGRAM[dk].items.forEach(function(x){ m = Math.max(m, parseInt(x.no, 10) || 0); }); return String(m + 1); }
 function delEx(id){
-  ['d1', 'd2'].forEach(function(dk){
+  DAYS.forEach(function(dk){
     var items = PROGRAM[dk].items, i = items.findIndex(function(x){ return x.id === id; });
     if (i > -1){ var g = {}; g[id] = items[i]; items.splice(i, 1); saveProg(g); }
   });
 }
 function readExForm(){
   var g = function(k){ return ($('xf-' + k).value || '').trim(); };
-  return { no: g('no').toUpperCase(), name: g('name'), reps: g('reps'), sets: g('sets'), tempo: g('tempo').toUpperCase(), rest: g('rest'), hold: g('hold'), url: g('url') };
+  return { no: g('no').toUpperCase(), name: g('name'), reps: g('reps'), sets: g('sets'), tempo: g('tempo').toUpperCase(), rest: g('rest'), hold: g('hold'), rir: g('rir'), url: g('url') };
 }
 // returns an error message, or '' when saved
 function saveExForm(){
   var d = readExForm(), f = S.exf;
   if (!/^\d{1,2}[A-Z]?$/.test(d.no)) return 'Number must look like 3 or 5A';
   if (!d.name) return 'Give the exercise a name';
-  var it = { no: d.no, name: d.name, reps: d.reps || '8', sets: Math.max(1, Math.min(10, parseInt(d.sets, 10) || 1)), tempo: d.tempo, rest: Math.max(0, parseInt(d.rest, 10) || 0), url: d.url };
+  var it = { no: d.no, name: d.name, reps: d.reps || '8', sets: Math.max(1, Math.min(10, parseInt(d.sets, 10) || 1)), tempo: d.tempo, rest: Math.max(0, parseInt(d.rest, 10) || 0), rir: d.rir, url: d.url };
   var hold = parseInt(d.hold, 10);
   var items = PROGRAM[f.dk].items, old = f.id && items.filter(function(x){ return x.id === f.id; })[0];
   if (old){ Object.keys(it).forEach(function(k){ old[k] = it[k]; }); if (hold > 0) old.hold = hold; else delete old.hold; }
@@ -298,7 +328,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '7';
+var APP_VERSION = '8';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -335,7 +365,7 @@ function blocks(dk, items){
   out.forEach(function(b){
     b.superset = b.items.length > 1;
     b.sets = Math.max.apply(null, b.items.map(function(i){ return i.sets; }));
-    b.rest = b.superset ? SUPERSET_REST : b.items[0].rest;
+    b.rest = b.superset ? (b.items[0].rest || SUPERSET_REST) : b.items[0].rest;
   });
   return out;
 }
@@ -362,7 +392,7 @@ var KEY_ACTIVE = 'lbl.active', KEY_PLAN = 'lbl.plan', KEY_HIST = 'lbl.history';
 function lsGet(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } }
 function lsSet(k, v){ try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
-var S = { view: 'home', day: 'd1', rec: null, confirm: false, confirmDel: false };
+var S = { view: 'home', day: 'u1', rec: null, confirm: false, confirmDel: false };
 var W = lsGet(KEY_ACTIVE, null);          // the workout in progress
 var PLAN = lsGet(KEY_PLAN, {});           // edits made on the overview before starting
 var HIST = lsGet(KEY_HIST, []);           // finished workouts (mirrored to claude.ai when available)
@@ -416,7 +446,7 @@ function gistPull(){
     HIST = h.list.map(stamp).sort(function(a, b){ return b.started - a.started; }); lsSet(KEY_HIST, HIST);
     FEEDBACK = f.list.sort(function(a, b){ return b.at - a.at; }); lsSet('lbl.feedback', FEEDBACK);
     SYNC.pulled = true; SYNC.state = 'ok'; SYNC.at = Date.now(); updSync();
-    var rp = r[2] && !Array.isArray(r[2]) && r[2].updated ? r[2] : null, progExtra = false;
+    var rp = r[2] && !Array.isArray(r[2]) && r[2].updated && r[2].rev === PROGRAM_REV ? r[2] : null, progExtra = false;
     if (rp && (!PROG || rp.updated > PROG.updated)){ PROG = rp; lsSet('lbl.program', PROG); applyProg(W ? W.day : null); }
     else if (PROG && (!rp || PROG.updated > rp.updated)) progExtra = true;
     if (h.extra || f.extra || progExtra) schedulePush();
@@ -631,10 +661,12 @@ function topBar(title, backAct, right){
   return '<div class="top">' + left +
     '<div style="flex:1;min-width:0;text-align:center"><h3>' + esc(title) + '</h3></div>' + (right || '<span style="width:44px"></span>') + '</div>';
 }
+function restText(sec){ return sec % 60 ? sec + 's' : (sec / 60) + ' min'; }
 function chips(it, withRest){
   var c = '<span class="chip accent">' + esc(it.reps) + (numeric(it.reps) ? ' reps' : '') + '</span><span class="chip">' + it.sets + ' sets</span>';
   if (it.tempo) c += '<span class="chip">' + esc(tempoText(it.tempo) || it.tempo) + '</span>';
-  if (withRest) c += '<span class="chip">' + (it.rest / 60) + ' min rest</span>';
+  if (it.rir) c += '<span class="chip">RIR ' + esc(it.rir) + '</span>';
+  if (withRest) c += '<span class="chip">' + restText(it.rest) + ' rest</span>';
   return '<div class="chips">' + c + '</div>';
 }
 function setGrid(rows){
@@ -690,13 +722,13 @@ function entryLine(x, r, act){
 }
 
 function viewHome(){
-  var h = '<div class="top"><div><div class="eyebrow">Strength</div><h1>Lower Body Log</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
+  var h = '<div class="top"><div><div class="eyebrow">Phase 1 · Hypertrophy</div><h1>Strength Log</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
     '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="history">History</button><button class="link" data-act="notes">Notes' + (notesBadge() ? ' (' + notesBadge() + ')' : '') + '</button><button class="link" data-act="settings">Settings</button></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
     h += '<button class="banner" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button>';
   }
-  ['d1', 'd2'].forEach(function(dk){
+  DAYS.forEach(function(dk){
     var p = PROGRAM[dk], last = hist().filter(function(x){ return x.day === dk; })[0];
     h += '<button class="card daycard" data-act="day" data-day="' + dk + '"><div><div class="eyebrow">' + p.label + '</div><h2>' + p.name + '</h2></div>' +
       '<div class="meta"><span>' + p.items.length + ' exercises</span><span>about ' + estMinutes(dk) + ' min</span><span>' + (last ? 'Last done ' + fmtDate(last.started) : 'Not done yet') + '</span></div>' +
@@ -711,6 +743,7 @@ function viewDay(){
   var h = topBar(p.name, 'home', busy ? null : '<button class="link" data-act="progedit" style="min-width:44px">' + (ed ? 'Done' : 'Edit') + '</button>');
   h += '<div class="muted" style="text-align:center;margin-top:-8px">' + p.label + ' · ' + p.items.length + ' exercises · about ' + estMinutes(dk) + ' min</div>';
   if (ed) h += '<div class="callout">Add, edit or delete exercises and sets. Changes apply to your next workouts; past workouts keep what you did.</div>';
+  if (p.warmup && !ed) h += '<details class="card warm"><summary><b>Warm up + activation</b></summary><span class="muted">' + esc(p.warmup) + '</span></details>';
   if (!p.items.length) h += '<div class="card"><span class="muted">No exercises in this day. Tap Edit, then Add exercise.</span></div>';
   blocks(dk).forEach(function(b){
     var inner = b.items.map(function(it, k){
@@ -725,7 +758,7 @@ function viewDay(){
       return (k ? '<div class="divider"></div>' : '') + '<div class="ex">' + head +
         (it.url ? '<a href="' + esc(it.url) + '" target="_blank" rel="noopener" style="font-size:14px;font-weight:600">Watch reference</a>' : '') + '</div></div>' + setGrid(rows) + lastLine(it.id) + '</div>';
     }).join('');
-    if (b.superset) h += '<section class="card ss"><div class="sshead"><span class="eyebrow">Superset ' + b.n + '</span><span class="chip">' + b.sets + ' rounds · ' + (SUPERSET_REST / 60) + ' min rest after each round</span></div>' + inner + '</section>';
+    if (b.superset) h += '<section class="card ss"><div class="sshead"><span class="eyebrow">Superset ' + b.n + '</span><span class="chip">' + b.sets + ' rounds · ' + restText(b.rest) + ' rest after each round</span></div>' + inner + '</section>';
     else h += '<section class="card">' + inner + '</section>';
   });
   if (ed){
@@ -750,8 +783,9 @@ function viewExEdit(){
     fld('name', 'Name', d.name, ' placeholder="e.g. Bulgarian Split Squat"') +
     '<div class="two">' + fld('reps', 'Reps', d.reps, ' placeholder="8, 30 sec, 15 m"') + fld('tempo', 'Tempo', d.tempo, ' autocapitalize="characters" placeholder="311, ISO"') + '</div>' +
     '<div class="two">' + fld('rest', 'Rest (seconds)', d.rest, ' inputmode="numeric"') + fld('hold', 'Hold timer (seconds)', d.hold, ' inputmode="numeric" placeholder="None"') + '</div>' +
+    fld('rir', 'RIR (reps in reserve)', d.rir, ' placeholder="1-2"') +
     fld('url', 'Video URL (YouTube)', d.url, ' inputmode="url" autocapitalize="off" spellcheck="false" placeholder="https://youtube.com/shorts/…"') +
-    '<span class="ref">The same number with a letter (5A, 5B, 5C) makes a superset: done back to back, then ' + (SUPERSET_REST / 60) + ' min rest.</span>' +
+    '<span class="ref">The same number with a letter (5A, 5B, 5C) makes a superset: done back to back, then the first one\'s rest.</span>' +
     '<div class="row"><button class="btn primary" data-act="exsave">Save</button><button class="btn" data-act="backday">Cancel</button></div></section>';
   return h;
 }
@@ -800,7 +834,7 @@ function viewFocus(){
   } else {
     var after = steps[W.cur + 1], label = 'Done set ' + (st.set + 1);
     if (b.superset && !st.rest && !st.end) label = 'Done, go to ' + exById(after.ex).no;
-    else if (st.rest) label += ' · start ' + (st.rest >= 60 ? (st.rest / 60) + ' min' : st.rest + 's') + ' rest';
+    else if (st.rest) label += ' · start ' + restText(st.rest) + ' rest';
     dock += '<button class="btn primary block" data-act="done">' + label + '</button>';
   }
   h += '<div class="dock">' + dock + '</div>';
@@ -925,7 +959,7 @@ function viewNotes(){
   var h = topBar('Notes for Claude', 'home', refreshBtn());
   h += '<div class="seg" role="group" aria-label="Filter notes">' + [['open', 'Open'], ['approved', 'Approved'], ['fixed', 'To check'], ['closed', 'Closed']].map(function(x){
     return '<button data-act="nfilter" data-f="' + x[0] + '" aria-pressed="' + (S.nf === x[0]) + '">' + x[1] + ' ' + counts[x[0]] + '</button>'; }).join('') + '</div>';
-  if (counts.approved) h += '<div class="callout"><b>' + counts.approved + ' approved.</b> Tap the button to copy <b>"fix feedback"</b> and open Claude, then paste it into the Lower Body Log session. Fixes come back here under To check.' +
+  if (counts.approved) h += '<div class="callout"><b>' + counts.approved + ' approved.</b> Tap the button to copy <b>"fix feedback"</b> and open Claude, then paste it into the Strength Log session. Fixes come back here under To check.' +
     '<a class="btn primary block" style="margin-top:10px" href="https://claude.ai/code" target="_blank" rel="noopener" data-act="askfix">Ask Claude to fix (' + counts.approved + ')</a></div>';
   if (!TOKEN) h += '<div class="callout">Notes stay on this phone until you add your GitHub token in Settings. Without it, Claude can\'t see them.</div>';
   if (S.nf === 'open'){
@@ -1105,7 +1139,7 @@ document.addEventListener('click', function(e){
       break;
     case 'progedit': S.progEdit = !S.progEdit; S.exdel = null; S.progReset = false; render(); break;
     case 'backday': S.exf = null; go('day'); break;
-    case 'exadd': S.exf = { dk: S.day, id: null, draft: { no: nextNo(S.day), name: '', reps: '8', sets: 3, tempo: '', rest: 60, hold: '', url: '' } }; go('exedit'); break;
+    case 'exadd': S.exf = { dk: S.day, id: null, draft: { no: nextNo(S.day), name: '', reps: '8', sets: 3, tempo: '', rest: 60, hold: '', rir: '', url: '' } }; go('exedit'); break;
     case 'exedit': var xe = exById(el.getAttribute('data-id')); if (!xe) break; S.exf = { dk: S.day, id: xe.id, draft: JSON.parse(JSON.stringify(xe)) }; go('exedit'); break;
     case 'exsave': var xerr = saveExForm(); if (xerr){ toast(xerr); break; } S.exf = null; go('day'); toast('Exercise saved'); break;
     case 'setplus': case 'setminus': var xs = exById(el.getAttribute('data-id')); if (!xs) break;
