@@ -72,7 +72,7 @@ button{font:inherit;color:inherit}
 .daycard{cursor:pointer;text-align:left;width:100%}
 .daycard .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--soft)}
 .daycard ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:15px}
-.daycard li{display:flex;gap:10px}
+.daycard li{display:flex;gap:10px;align-items:baseline}
 .daycard li b{min-width:34px;font-family:var(--font-display);font-size:22px;color:var(--soft)}
 .banner{background:var(--accent);color:var(--accent-ink);border-radius:var(--r-lg);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;border:0;width:100%;text-align:left}
 .note{font-size:13px;color:var(--soft);text-align:center;padding-bottom:8px}
@@ -185,7 +185,7 @@ button{font:inherit;color:inherit}
 .hdate{margin-top:6px}
 .hcard{gap:10px}
 .hlist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px;border-top:1px solid var(--line);padding-top:10px}
-.hlist li{display:flex;gap:10px}
+.hlist li{display:flex;gap:10px;align-items:baseline}
 .hlist li b{min-width:30px;font-family:var(--font-display);font-size:18px;color:var(--soft)}
 .hlist .muted{font-size:13.5px}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
@@ -334,7 +334,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '11';
+var APP_VERSION = '12';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
