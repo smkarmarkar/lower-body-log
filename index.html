@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Lower Log">
+<meta name="apple-mobile-web-app-title" content="Strength">
 <meta name="theme-color" content="#eef0f3">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon-180.png">
@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
-<title>Strength Log</title>
+<title>Strength Tracker</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -130,6 +130,15 @@ button{font:inherit;color:inherit}
 .dock .next{font-size:13.5px;color:var(--soft);text-align:center}
 
 .timer{display:flex;align-items:center;gap:16px}
+.restov{position:fixed;inset:0;z-index:25;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:calc(24px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px));text-align:center}
+.restov .eyebrow{font-size:16px;letter-spacing:.14em}
+.ring.big{width:min(86vw,62vh);height:min(86vw,62vh)}
+.ring.big circle{stroke-width:7}
+.ring.big b{font-size:min(30vw,21vh);letter-spacing:-.01em}
+.restov.soon .fg{stroke:var(--danger)}.restov.soon b{color:var(--danger)}
+.ovnext{font-size:19px;font-weight:600;max-width:30ch}
+.restov .row{width:min(100%,420px)}
+.restov .row .btn{flex:1 1 0;min-height:60px;font-size:19px}
 .ring{width:96px;height:96px;flex:none;position:relative}
 .ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .ring circle{fill:none;stroke-width:9}
@@ -220,14 +229,14 @@ var PROGRAM_REV = 2;   // bump when the program below changes, so old in-app edi
 var DAYS = ['u1', 'd1', 'u2', 'd2'];
 var PROGRAM = {
   u1: { label: 'Session 1', name: 'Upper 1', warmup: 'Cat-camel x 10, book opener x 10 each, roller back extension x 10, shoulder circumduction x 10, prone W raise x 10, scapular push-up x 10, shoulder external rotation x 10 each', items: [
-    { no:'1',  id:'db-shoulder-press', name:'DB Shoulder Press',          reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
-    { no:'2',  id:'incline-chest-press',name:'Incline Chest Press',       reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
-    { no:'3',  id:'db-arnold-press',   name:'DB Arnold Press',            reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
-    { no:'4',  id:'db-lateral-raise',  name:'DB Lateral Raise',           reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
-    { no:'5',  id:'rope-extension',    name:'Rope Extension',             reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
-    { no:'6',  id:'db-oh-tricep-ext',  name:'DB Overhead Tricep Extension',reps:'8',     sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
-    { no:'7A', id:'tall-knee-pallof',  name:'Tall-Kneeling Pallof Press', reps:'30 sec', sets:2, tempo:'',    rir:'',    rest:60, url:'', hold:30 },
-    { no:'7B', id:'ab-crunch',         name:'Abdominal Crunches',         reps:'20',     sets:2, tempo:'',    rir:'',    rest:60, url:'' }
+    { no:'1',  id:'db-shoulder-press', name:'DB Shoulder Press',          reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'https://youtu.be/0JfYxMRsUCQ' },
+    { no:'2',  id:'incline-chest-press',name:'Incline Chest Press',       reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'https://youtube.com/shorts/8fXfwG4ftaQ' },
+    { no:'3',  id:'db-arnold-press',   name:'DB Arnold Press',            reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'https://youtube.com/shorts/AjB-UXErljM' },
+    { no:'4',  id:'db-lateral-raise',  name:'DB Lateral Raise',           reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'https://youtube.com/shorts/xyK8UiC-BUw' },
+    { no:'5',  id:'rope-extension',    name:'Rope Extension',             reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'https://youtube.com/shorts/NvZKjiZ8NYc' },
+    { no:'6',  id:'db-oh-tricep-ext',  name:'DB Overhead Tricep Extension',reps:'8',     sets:3, tempo:'321', rir:'2',   rest:60, url:'https://youtube.com/shorts/b_r_LW4HEcM' },
+    { no:'7A', id:'tall-knee-pallof',  name:'Tall-Kneeling Pallof Press', reps:'30 sec', sets:2, tempo:'',    rir:'',    rest:60, url:'https://youtube.com/shorts/nU1Mwcc9_-k', hold:30 },
+    { no:'7B', id:'ab-crunch',         name:'Abdominal Crunches',         reps:'20',     sets:2, tempo:'',    rir:'',    rest:60, url:'https://youtube.com/shorts/ZKw4t23ERuw' }
   ]},
   d1: { label: 'Session 2', name: 'Lower 1', warmup: 'Skipping x 100, cat-camel x 10, lateral hip rocker x 10, couch stretch x 10 each, supine hamstring / leg extension x 10 each, hip 90-90 get-up, single-leg glute bridge 5 sec x 10 each, single-leg wall sit 30 sec x 2 each, elbow plank 1 min', items: [
     { no:'1',  id:'goblet-squat',   name:'DB Goblet Squat',              reps:'8',      sets:3, tempo:'211',   rir:'1-2', rest:90,  url:'https://youtube.com/shorts/K2TumOeks2A' },
@@ -240,14 +249,14 @@ var PROGRAM = {
     { no:'6C', id:'farmers-carry',  name:'Farmers Carry',                reps:'15 m',   sets:2, tempo:'',      rir:'',    rest:90,  url:'https://youtube.com/shorts/Ozp9nI_w4xo' }
   ]},
   u2: { label: 'Session 3', name: 'Upper 2', warmup: 'Cat-camel x 10, book opener x 10 each, roller back extension x 10, shoulder circumduction x 10, prone W raise x 10, scapular push-up x 10, shoulder external rotation x 10 each', items: [
-    { no:'1',  id:'bench-row',         name:'Bench-Supported Row',        reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
-    { no:'2',  id:'lat-pulldown',      name:'Lat Pulldown',               reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'' },
-    { no:'3',  id:'wide-cable-row',    name:'Wide-Grip Cable Row',        reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
-    { no:'4',  id:'db-shrug',          name:'DB Shoulder Shrug',          reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'' },
-    { no:'5A', id:'bb-bicep-curl',     name:'Barbell Bicep Curl',         reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
-    { no:'5B', id:'incline-db-curl',   name:'Incline DB Bicep Curl',      reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'' },
-    { no:'6A', id:'tk-cable-rotation', name:'Tall-Kneeling Cable Rotation',reps:'10',    sets:2, tempo:'321', rir:'',    rest:60, url:'' },
-    { no:'6B', id:'supine-lat-crunch', name:'Supine Lateral Crunches',    reps:'15 each',sets:2, tempo:'321', rir:'',    rest:60, url:'' }
+    { no:'1',  id:'bench-row',         name:'Bench-Supported Row',        reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'https://youtube.com/shorts/czoQ_ncuqqI' },
+    { no:'2',  id:'lat-pulldown',      name:'Lat Pulldown',               reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'https://youtube.com/shorts/bNmvKpJSWKM' },
+    { no:'3',  id:'wide-cable-row',    name:'Wide-Grip Cable Row',        reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'https://youtube.com/shorts/vqPY3fDessY' },
+    { no:'4',  id:'db-shrug',          name:'DB Shoulder Shrug',          reps:'8',      sets:3, tempo:'311', rir:'2',   rest:60, url:'https://youtube.com/shorts/rFsSeClGnNA' },
+    { no:'5A', id:'bb-bicep-curl',     name:'Barbell Bicep Curl',         reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'https://youtube.com/shorts/54x2WF1_Suc' },
+    { no:'5B', id:'incline-db-curl',   name:'Incline DB Bicep Curl',      reps:'8',      sets:3, tempo:'321', rir:'2',   rest:60, url:'https://youtube.com/shorts/XhIsIcjIbCw' },
+    { no:'6A', id:'tk-cable-rotation', name:'Tall-Kneeling Cable Rotation',reps:'10',    sets:2, tempo:'321', rir:'',    rest:60, url:'https://youtube.com/shorts/YCysC7IlS08' },
+    { no:'6B', id:'supine-lat-crunch', name:'Supine Lateral Crunches',    reps:'15 each',sets:2, tempo:'321', rir:'',    rest:60, url:'https://youtube.com/shorts/UTClZmC92qU' }
   ]},
   d2: { label: 'Session 4', name: 'Lower 2', warmup: 'Skipping x 100, cat-camel x 10, lateral hip rocker x 10, couch stretch x 10 each, supine hamstring / leg extension x 10 each, hip 90-90 get-up, single-leg glute bridge 5 sec x 10 each, single-leg wall sit 30 sec x 2 each, elbow plank 1 min', items: [
     { no:'1',  id:'sl-hip-thrust',  name:'DB Single-Leg Hip Thrust',     reps:'8',      sets:3, tempo:'311',   rir:'1-2', rest:90,  url:'https://youtube.com/shorts/bRZeB6UG6Js' },
@@ -255,11 +264,12 @@ var PROGRAM = {
     { no:'3A', id:'ham-curl',       name:'Machine Hamstring Curl',       reps:'10',     sets:3, tempo:'311',   rir:'2',   rest:60,  url:'https://youtube.com/shorts/kYx9uchpwVo' },
     { no:'3B', id:'sl-seated-calf', name:'Single-Leg Seated Calf Raise', reps:'10',     sets:3, tempo:'311',   rir:'2',   rest:60,  url:'https://youtube.com/shorts/0T0LtUAqPmU' },
     { no:'4A', id:'sl-elev-plank',  name:'Single-Leg Elevated Plank',    reps:'30 sec', sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/QfU2iZFeN-M', hold:30 },
-    { no:'4B', id:'hip-flexion-hold',name:'Hip Flexion Hold (high plank)',reps:'30 sec',sets:2, tempo:'',      rir:'',    rest:60,  url:'', hold:30 },
+    { no:'4B', id:'hip-flexion-hold',name:'Hip Flexion Hold (high plank)',reps:'30 sec',sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/_3rx49bDWgY', hold:30 },
     { no:'4C', id:'suitcase-carry', name:'Suitcase Carry',               reps:'15 m',   sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/iTjwbts8Djw' }
   ]}
 };
-var SUPERSET_REST = 120;
+var SUPERSET_REST = 120;   // after each superset round
+var NEXT_EX_REST = 60;     // after the last set, before the next exercise
 /* ===================== /PROGRAM ===================== */
 
 /* Program edits made in the app (add, edit, delete exercises and sets). The program above stays as the original.
@@ -317,7 +327,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '9';
+var APP_VERSION = '10';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -354,19 +364,23 @@ function blocks(dk, items){
   out.forEach(function(b){
     b.superset = b.items.length > 1;
     b.sets = Math.max.apply(null, b.items.map(function(i){ return i.sets; }));
-    b.rest = b.superset ? (b.items[0].rest || SUPERSET_REST) : b.items[0].rest;
+    b.rest = b.superset ? SUPERSET_REST : b.items[0].rest;
   });
   return out;
 }
 // Normal exercise: set, rest, set, rest, set. Superset: A, B, C back to back, rest, then the next round.
+// After the last set of an exercise there is a short rest, then the next exercise starts by itself.
 function buildSteps(dk){
-  var out = [];
-  blocks(dk).forEach(function(b, bi){
+  var out = [], bl = blocks(dk);
+  bl.forEach(function(b, bi){
     for (var r = 0; r < b.sets; r++){
       var round = b.items.filter(function(it){ return r < it.sets; });
       round.forEach(function(it, ii){
         var lastInRound = ii === round.length - 1, lastRound = r === b.sets - 1;
-        out.push({ b: bi, ex: it.id, set: r, rest: lastInRound && !lastRound ? (FAST ? 5 : b.rest) : 0, end: lastInRound && lastRound });
+        var end = lastInRound && lastRound, rest = 0;
+        if (lastInRound && !lastRound) rest = FAST ? 5 : b.rest;
+        else if (end && bi < bl.length - 1) rest = FAST ? 5 : NEXT_EX_REST;
+        out.push({ b: bi, ex: it.id, set: r, rest: rest, end: end });
       });
     }
   });
@@ -537,16 +551,18 @@ function stepsOf(){ return buildSteps(W.day); }
 function doneSet(){
   var steps = stepsOf(), st = steps[W.cur];
   W.sets[st.ex][st.set].at = Date.now(); W.hold = null; S.sel = null;
-  if (st.rest) W.rest = { until: Date.now() + st.rest * 1000, total: st.rest };
+  if (st.rest){ W.rest = { until: Date.now() + st.rest * 1000, total: st.rest }; S.restHide = false; }
   else if (st.end) W.blockDone = true;
   else W.cur++;
   saveActive(); render();
 }
 function endRest(silent){
   if (!W || !W.rest) return;
+  var from = stepsOf()[W.cur].b;
   W.rest = null; W.cur++; S.sel = null; saveActive();
-  if (!silent) beep(2);
+  if (!silent) beep(3, true);
   render();
+  if (stepsOf()[W.cur].b !== from) scrollTo(0, 0);
 }
 function gotoBlock(bi){
   var steps = stepsOf(), idx = steps.findIndex(function(s){ return s.b === bi; });
@@ -708,7 +724,7 @@ function entryLine(x, r, act){
 }
 
 function viewHome(){
-  var h = '<div class="top"><div><div class="eyebrow">Phase 1 · Hypertrophy</div><h1>Strength Log</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
+  var h = '<div class="top"><div><div class="eyebrow">Phase 1 · Hypertrophy</div><h1>Strength Tracker</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
     '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="history">History</button><button class="link" data-act="feedback">Feedback</button><button class="link" data-act="settings">Settings</button></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
@@ -809,10 +825,18 @@ function viewFocus(){
   // action dock
   var dock = '';
   if (W.rest){
-    var next = steps[W.cur + 1], nit = exById(next.ex);
+    var next = steps[W.cur + 1], nit = exById(next.ex), nb2 = bl[next.b];
+    var nextText = next.b !== st.b ? 'Next exercise: ' + esc(nit.no + ' ' + nit.name)
+      : 'Next: ' + (nb2.superset ? 'Round ' + (next.set + 1) + ', ' : 'Set ' + (next.set + 1) + ', ') + esc(nit.no + ' ' + nit.name);
     dock += '<div class="timer"><div class="ring"><svg viewBox="0 0 100 100"><circle class="bgc" cx="50" cy="50" r="44"/><circle id="rring" class="fg" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><b id="rtime">0:00</b></div>' +
-      '<div class="info"><div><div class="eyebrow">Rest</div><div><b>Next:</b> ' + (b.superset ? 'Round ' + (next.set + 1) + ', ' : 'Set ' + (next.set + 1) + ', ') + esc(nit.no + ' ' + nit.name) + '</div></div>' +
-      '<div class="row"><button class="btn" data-act="plus30">+30s</button><button class="btn" data-act="skiprest">Skip</button></div></div></div>';
+      '<div class="info"><div><div class="eyebrow">Rest</div><div>' + nextText + '</div></div>' +
+      '<div class="row"><button class="btn" data-act="plus30">+30s</button><button class="btn" data-act="skiprest">Skip</button>' + (S.restHide ? '<button class="btn" data-act="restbig">Big</button>' : '') + '</div></div></div>';
+    // full-screen timer, readable from across the gym
+    if (!S.restHide) h += '<div class="restov" role="timer" aria-live="off"><div class="eyebrow">Rest</div>' +
+      '<div class="ring big"><svg viewBox="0 0 100 100"><circle class="bgc" cx="50" cy="50" r="44"/><circle id="ovring" class="fg" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="0"/></svg><b id="ovtime">0:00</b></div>' +
+      '<div class="ovnext">' + nextText + '</div>' +
+      '<div class="row"><button class="btn" data-act="plus30">+30s</button><button class="btn primary" data-act="skiprest">Skip rest</button></div>' +
+      '<button class="link" data-act="resthide">Hide timer</button></div>';
   } else if (W.blockDone){
     var nb = bl[st.b + 1];
     dock += nb ? '<div class="next">All sets done. Up next: ' + esc(nb.items.map(function(x){ return x.no + ' ' + x.name; }).join(' + ')) + '</div><button class="btn good block" data-act="nextex">Next exercise</button>'
@@ -820,6 +844,7 @@ function viewFocus(){
   } else {
     var after = steps[W.cur + 1], label = 'Done set ' + (st.set + 1);
     if (b.superset && !st.rest && !st.end) label = 'Done, go to ' + exById(after.ex).no;
+    else if (st.rest && st.end) label += ' · ' + restText(st.rest) + ' rest, then next exercise';
     else if (st.rest) label += ' · start ' + restText(st.rest) + ' rest';
     dock += '<button class="btn primary block" data-act="done">' + label + '</button>';
   }
@@ -917,12 +942,19 @@ function render(){
 
 /* ===================== TIMERS, SOUND, WAKE LOCK ===================== */
 var AC = null;
-function unlockAudio(){ try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch(e){} }
-function beep(n){
-  try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch(e){}
+function unlockAudio(){
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch(e){}   // iOS 17+: beep even with the silent switch on
+  try { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch(e){}
+}
+// n beeps; long = the end-of-rest signal, short = the 3-2-1 countdown ticks
+function beep(n, long){
+  try { navigator.vibrate && navigator.vibrate(long ? [400, 150, 400, 150, 400] : 120); } catch(e){}
   if (!AC) return;
-  try { for (var i = 0; i < n; i++){ var o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + i * 0.28;
-    o.frequency.value = 880; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); o.start(t); o.stop(t + 0.22); } } catch(e){}
+  try { if (AC.state === 'suspended') AC.resume(); } catch(e){}
+  var len = long ? 0.45 : 0.12, gap = long ? 0.6 : 0.2;
+  try { for (var i = 0; i < n; i++){ var o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime + i * gap;
+    o.type = 'square'; o.frequency.value = long ? 988 : 784; o.connect(g); g.connect(AC.destination);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.6, t + 0.02); g.gain.setValueAtTime(0.6, t + len - 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + len); o.start(t); o.stop(t + len + 0.02); } } catch(e){}
 }
 function tick(){
   if (!W || S.view !== 'focus') return;
@@ -930,9 +962,11 @@ function tick(){
   if (W.rest){
     var left = Math.max(0, (W.rest.until - now) / 1000);
     if (left <= 0) return endRest();
-    var s = Math.ceil(left), el = $('rtime'), ring = $('rring');
-    if (el) el.textContent = Math.floor(s / 60) + ':' + pad(s % 60);
-    if (ring) ring.setAttribute('stroke-dashoffset', String(276.5 * (1 - left / W.rest.total)));
+    var s = Math.ceil(left), txt = Math.floor(s / 60) + ':' + pad(s % 60), off = String(276.5 * (1 - left / W.rest.total));
+    ['rtime', 'ovtime'].forEach(function(id){ var el = $(id); if (el) el.textContent = txt; });
+    ['rring', 'ovring'].forEach(function(id){ var el = $(id); if (el) el.setAttribute('stroke-dashoffset', off); });
+    var ov = document.querySelector('.restov'); if (ov) ov.classList.toggle('soon', s <= 5);
+    if (s <= 3 && W.rest.ticked !== s){ W.rest.ticked = s; beep(1); }
   }
   if (W.hold && W.hold.until){
     var hit = exById(stepsOf()[W.cur].ex), hl = Math.max(0, (W.hold.until - now) / 1000);
@@ -981,6 +1015,8 @@ document.addEventListener('click', function(e){
     case 'done': doneSet(); break;
     case 'plus30': if (W.rest){ W.rest.until += 30000; W.rest.total += 30; saveActive(); tick(); } break;
     case 'skiprest': endRest(true); break;
+    case 'resthide': S.restHide = true; render(); break;
+    case 'restbig': S.restHide = false; render(); break;
     case 'hold': var hx = exById(stepsOf()[W.cur].ex), hlft = holdLeft(hx); if (hlft <= 0) hlft = holdTotal(hx);
       W.hold = { until: Date.now() + hlft * 1000 }; saveActive(); render(); break;
     case 'holdpause': W.hold = { left: holdLeft(exById(stepsOf()[W.cur].ex)) }; saveActive(); render(); break;
