@@ -181,6 +181,13 @@ button{font:inherit;color:inherit}
 .sitem{display:flex;flex-direction:column;gap:2px}
 .sitem .l{font-size:14px;color:var(--soft);font-variant-numeric:tabular-nums}
 .hist{display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer;width:100%;text-align:left}
+.hcard>button.hist{background:none;border:0;padding:0;font:inherit;color:inherit}
+.hdate{margin-top:6px}
+.hcard{gap:10px}
+.hlist{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:15px;border-top:1px solid var(--line);padding-top:10px}
+.hlist li{display:flex;gap:10px}
+.hlist li b{min-width:30px;font-family:var(--font-display);font-size:18px;color:var(--soft)}
+.hlist .muted{font-size:13.5px}
 .toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:600;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
 .ref{font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums}
 .ref b{color:var(--ink);font-weight:600}
@@ -327,7 +334,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '10';
+var APP_VERSION = '11';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -535,7 +542,10 @@ function planVal(dk, exId, i, f){
   var p = PLAN[dk] && PLAN[dk][exId] && PLAN[dk][exId][i];
   if (p && p[f] != null) return p[f];
   if (f === 'reps') return exById(exId).reps;
-  var last = lastFor(exId); return last && last.sets[i] ? (last.sets[i].kg || '') : '';
+  var last = lastFor(exId); if (!last) return '';
+  // a set left blank last time (or a set added since) takes the weight of the nearest set before it
+  for (var j = Math.min(i, last.sets.length - 1); j >= 0; j--){ var kg = last.sets[j] && last.sets[j].kg; if (kg !== '' && kg != null) return kg; }
+  return '';
 }
 
 function startWorkout(dk){
@@ -745,7 +755,8 @@ function viewDay(){
   var h = topBar(p.name, 'home', busy ? null : '<button class="link" data-act="progedit" style="min-width:44px">' + (ed ? 'Done' : 'Edit') + '</button>');
   h += '<div class="muted" style="text-align:center;margin-top:-8px">' + p.label + ' · ' + p.items.length + ' exercises · about ' + estMinutes(dk) + ' min</div>';
   if (ed) h += '<div class="callout">Add, edit or delete exercises and sets. Changes apply to your next workouts; past workouts keep what you did.</div>';
-  if (p.warmup && !ed) h += '<details class="card warm"><summary><b>Warm up + activation</b></summary><span class="muted">' + esc(p.warmup) + '</span></details>';
+  // stays the way you left it (open by default)
+  if (p.warmup && !ed) h += '<details class="card warm"' + (lsGet('lbl.warmopen', true) ? ' open' : '') + '><summary><b>Warm up + activation</b></summary><span class="muted">' + esc(p.warmup) + '</span></details>';
   if (!p.items.length) h += '<div class="card"><span class="muted">No exercises in this day. Tap Edit, then Add exercise.</span></div>';
   blocks(dk).forEach(function(b){
     var inner = b.items.map(function(it, k){
@@ -890,12 +901,28 @@ function viewHistory(){
   var h = topBar('History', 'home'), arch = archivedHist();
   var archBlock = !arch.length ? '' : '<button class="link" data-act="togglearch" style="align-self:center">' + (S.showArch ? 'Hide' : 'Show') + ' archive (' + arch.length + ')</button>' +
     (S.showArch ? '<div class="eyebrow">Archive</div>' + arch.map(histRow).join('') : '');
-  if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a Lower 1 or Lower 2 session and it shows up here with its weights and times.</span></div>' + archBlock;
+  if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a session and it shows up here with its weights and times.</span></div>' + archBlock;
+  // grouped by date, newest first; each workout lists every exercise with its reps and weights
+  var lastDate = '';
   hist().forEach(function(rec){
-    h += '<button class="card hist" data-act="open" data-id="' + rec.id + '"><span><b>' + PROGRAM[rec.day].name + '</b> <span class="muted">' + PROGRAM[rec.day].label + '</span><br><span class="muted" style="font-size:14px">' + fmtDate(rec.started) + ' · ' + fmtTime(rec.started) + '</span></span>' +
-      '<span class="muted num" style="font-size:14px;text-align:right">' + setCount(rec) + ' sets<br>' + volume(rec).toLocaleString() + ' kg</span></button>';
+    var d = fmtDate(rec.started);
+    if (d !== lastDate){ h += '<h3 class="hdate">' + esc(d) + '</h3>'; lastDate = d; }
+    h += '<section class="card hcard"><button class="hist" data-act="open" data-id="' + rec.id + '"><span><b>' + PROGRAM[rec.day].name + '</b> <span class="muted">' + PROGRAM[rec.day].label + '</span><br><span class="muted" style="font-size:14px">' + fmtTime(rec.started) + ' to ' + fmtTime(rec.ended) + ' · ' + mins(rec) + ' min</span></span>' +
+      '<span class="muted num" style="font-size:14px;text-align:right">' + setCount(rec) + ' sets<br>' + volume(rec).toLocaleString() + ' kg</span></button>' +
+      '<ol class="hlist">' + histDetail(rec) + '</ol>' +
+      '<button class="link" data-act="open" data-id="' + rec.id + '" style="align-self:flex-start;padding-left:0">Edit, copy for Strava or archive</button></section>';
   });
   return h + archBlock + '<div class="note" id="syncnote">' + esc(syncText()) + '</div>';
+}
+function histDetail(rec){
+  return recItems(rec).map(function(it){
+    var s = rec.sets[it.id] || [], reps = s.map(function(x){ return x.reps; });
+    var kgs = s.map(function(x){ return x.kg === '' || x.kg == null ? 'BW' : x.kg; });
+    var same = reps.every(function(r){ return r === reps[0]; });
+    var line = same ? s.length + ' × ' + esc(reps[0]) + (numeric(reps[0]) ? ' reps' : '') : s.length + ' sets: ' + reps.map(esc).join(' / ');
+    if (kgs.some(function(k){ return k !== 'BW'; })) line += ' · ' + kgs.map(esc).join(' / ') + ' kg';
+    return '<li><b>' + esc(it.no) + '</b><span>' + esc(it.name) + '<br><span class="muted num">' + line + '</span></span></li>';
+  }).join('');
 }
 
 function refreshBtn(){
@@ -1069,6 +1096,7 @@ document.addEventListener('click', function(e){
       break;
   }
 });
+document.addEventListener('toggle', function(e){ if (e.target.classList && e.target.classList.contains('warm')) lsSet('lbl.warmopen', e.target.open); }, true);
 document.addEventListener('input', function(e){
   var el = e.target; if (!el.hasAttribute || !el.hasAttribute('data-in')) return;
   var ex = el.getAttribute('data-ex'), i = +el.getAttribute('data-i'), f = el.getAttribute('data-f'), v = el.value.trim().replace(',', '.');
