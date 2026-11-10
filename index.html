@@ -478,7 +478,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '19';
+var APP_VERSION = '20';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -816,6 +816,7 @@ var ICON = {
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>',
   expand: '<svg class="e" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   close: '<svg class="x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
 };
 function topBar(title, backAct, right){
@@ -886,8 +887,7 @@ function entryLine(x, r, act){
 }
 
 function viewHome(){
-  var h = '<div class="top"><div><div class="eyebrow">Phase 1 · Hypertrophy</div><h1>Strength Tracker</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
-    '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="settings">Settings</button></div>';
+  var h = '<div class="top"><div><div class="eyebrow">Phase 1 · Hypertrophy</div><h1>Strength Tracker</h1></div><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
     // tap to resume; slide left to reveal Delete
