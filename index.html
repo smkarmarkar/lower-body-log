@@ -265,6 +265,22 @@ a{color:var(--ink);text-underline-offset:4px}
 .daycard ol{font-size:15px;gap:6px}
 .daycard li b,.hlist li b{font-family:var(--font-body);font-weight:600;font-size:16px;min-width:30px;color:var(--soft);font-variant-numeric:tabular-nums}
 .banner{background:var(--primary);color:var(--primary-foreground);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
+/* Home: app title, phase heading, collapsible session rows */
+.apptitle{font-size:15px;font-weight:600;color:var(--soft)}
+.phase{margin-top:-10px}
+.seclabel{text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:-8px}
+.sessions{padding:0;gap:0;overflow:hidden}
+.sess+.sess{border-top:1px solid var(--line)}
+.sess summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;font-size:15.5px}
+.sess summary::-webkit-details-marker{display:none}
+.sess summary::after{content:"";flex:none;width:7px;height:7px;margin-right:4px;border-right:2px solid var(--soft);border-bottom:2px solid var(--soft);transform:translateY(-2px) rotate(45deg);transition:transform .2s}
+.sess[open] summary::after{transform:translateY(2px) rotate(-135deg)}
+.sess summary:hover{background:color-mix(in srgb,var(--muted) 50%,var(--card))}
+.sessbody{padding:0 20px 18px;display:flex;flex-direction:column;gap:12px}
+.sessbody .meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;color:var(--soft)}
+.sessbody ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.sessbody li{display:flex;gap:10px;align-items:baseline}
+.sessbody li b{min-width:30px;font-weight:600;font-size:16px;color:var(--soft);font-variant-numeric:tabular-nums}
 /* a card that opens another screen */
 .navcard{flex-direction:row;align-items:center;justify-content:space-between;text-align:left;width:100%;cursor:pointer;font:inherit;color:inherit}
 .navcard:hover{background:color-mix(in srgb,var(--muted) 50%,var(--card))}
@@ -478,7 +494,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '20';
+var APP_VERSION = '21';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -887,19 +903,22 @@ function entryLine(x, r, act){
 }
 
 function viewHome(){
-  var h = '<div class="top"><div><div class="eyebrow">Phase 1 · Hypertrophy</div><h1>Strength Tracker</h1></div><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>';
+  var h = '<div class="top"><span class="apptitle">Strength Tracker</span><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>' +
+    '<h1 class="phase">Phase 1</h1>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
     // tap to resume; slide left to reveal Delete
     h += '<div class="swipe"><button class="swdel" data-act="wipdel" aria-label="Delete the workout in progress">Delete</button>' +
       '<button class="banner swfront" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button></div>';
   }
-  DAYS.forEach(function(dk){
-    var p = PROGRAM[dk], last = hist().filter(function(x){ return x.day === dk; })[0];
-    h += '<button class="card daycard" data-act="day" data-day="' + dk + '"><div><div class="eyebrow">' + p.label + '</div><h2>' + p.name + '</h2></div>' +
-      '<div class="meta"><span>' + p.items.length + ' exercises</span><span>about ' + estMinutes(dk) + ' min</span><span>' + (last ? 'Last done ' + fmtDate(last.started) : 'Not done yet') + '</span></div>' +
-      '<ol>' + p.items.map(function(it){ return '<li><b>' + it.no + '</b><span>' + esc(it.name) + '</span></li>'; }).join('') + '</ol></button>';
-  });
+  // one collapsed row per session; tap to see its details, then Open to start
+  h += '<div class="eyebrow seclabel">Hypertrophy</div><section class="card sessions">' + DAYS.map(function(dk){
+    var p = PROGRAM[dk], last = hist().filter(function(x){ return x.day === dk; })[0], n = p.items.length;
+    return '<details class="sess" data-dk="' + dk + '"' + (S.homeOpen && S.homeOpen[dk] ? ' open' : '') + '><summary><span><b>' + p.label + ': ' + esc(p.name) + '</b> <span class="muted">(' + n + (n === 1 ? ' exercise' : ' exercises') + ')</span></span></summary>' +
+      '<div class="sessbody"><div class="meta"><span>about ' + estMinutes(dk) + ' min</span><span>' + (last ? 'Last done ' + fmtDate(last.started) : 'Not done yet') + '</span></div>' +
+      '<ol>' + p.items.map(function(it){ return '<li><b>' + it.no + '</b><span>' + esc(it.name) + '</span></li>'; }).join('') + '</ol>' +
+      '<button class="btn primary block" data-act="day" data-day="' + dk + '">Open ' + esc(p.name) + '</button></div></details>';
+  }).join('') + '</section>';
   h += '<div class="note" id="syncnote">' + esc(syncText()) + '</div>';
   return h;
 }
@@ -1336,7 +1355,12 @@ document.addEventListener('click', function(e){
       break;
   }
 });
-document.addEventListener('toggle', function(e){ if (e.target.classList && e.target.classList.contains('warm')) lsSet('lbl.warmopen', e.target.open); }, true);
+document.addEventListener('toggle', function(e){
+  var t = e.target; if (!t.classList) return;
+  if (t.classList.contains('warm')) lsSet('lbl.warmopen', t.open);
+  // Home session rows: remember what is open while the app stays open, so a background sync doesn't fold them back
+  if (t.classList.contains('sess')){ S.homeOpen = S.homeOpen || {}; S.homeOpen[t.getAttribute('data-dk')] = t.open; }
+}, true);
 document.addEventListener('input', function(e){
   var el = e.target; if (!el.hasAttribute || !el.hasAttribute('data-in')) return;
   var ex = el.getAttribute('data-ex'), i = +el.getAttribute('data-i'), f = el.getAttribute('data-f'), v = el.value.trim().replace(',', '.');
