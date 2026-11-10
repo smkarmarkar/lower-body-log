@@ -39,4 +39,9 @@ Sandeep uploads a coach PDF or .xlsx in Settings → New phase, with an optional
 5. Append `{id:'p2', name:'Phase 2', focus:'…', days:[…]}` to `PHASES`. The last phase is the current one on Home; earlier phases stay reachable through the phase switcher. Bump `PROGRAM_REV` and `APP_VERSION`, test at phone size, then push.
 6. Set the request to `status:'built'`, `builtAs:'Phase 2'`, `updated:<now>` in `phase-requests.json`. If something is unclear, set `status:'needs-info'` with a `reply` question instead; the app shows it under New phase.
 
+Fixing and removing phases (v27):
+- Settings → Your phases lets Sandeep remove a phase (any but the first) or restore it. Removal only hides it, stored as `phases.json` in the Gist (`{updated, hidden:[ids]}`); the code and logged workouts stay. Delete a phase from `PHASES`/`PROGRAM` only when he asks for that.
+- "Ask Claude to fix" on a built request sets it back to `pending` with `redo:true` and appends `Fix: <text>` to `note`. On "build new phase", treat a `redo` request as a change to the phase named in `builtAs`, not a new phase.
+- A request with `deleted:true` is ignored.
+
 Test at phone size (393x793) before pushing. Adding `#fast` to the URL shortens rests to 5 seconds and holds to 3 seconds.

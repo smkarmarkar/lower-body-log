@@ -403,8 +403,11 @@ var PHASES = [
   { id: 'p2', name: 'Phase 2', focus: 'Lower body', days: ['p2s1', 'p2s2'] }
 ];
 var DAYS = []; PHASES.forEach(function(ph){ DAYS.push.apply(DAYS, ph.days); });
-function currentPhase(){ return PHASES[PHASES.length - 1]; }
-function shownPhase(){ return PHASES.filter(function(ph){ return ph.id === S.homePhase; })[0] || currentPhase(); }
+/* Phases removed in Settings are hidden, not deleted (PHASEHIDE, synced as phases.json). The first phase can't be removed. */
+function phaseHidden(ph){ return ph !== PHASES[0] && PHASEHIDE.hidden.indexOf(ph.id) >= 0; }
+function livePhases(){ return PHASES.filter(function(ph){ return !phaseHidden(ph); }); }
+function currentPhase(){ var L = livePhases(); return L[L.length - 1]; }
+function shownPhase(){ return livePhases().filter(function(ph){ return ph.id === S.homePhase; })[0] || currentPhase(); }
 var PROGRAM = {
   u1: { label: 'Session 1', name: 'Upper 1', warmup: 'Cat-camel x 10, book opener x 10 each, roller back extension x 10, shoulder circumduction x 10, prone W raise x 10, scapular push-up x 10, shoulder external rotation x 10 each', items: [
     { no:'1',  id:'db-shoulder-press', name:'DB Shoulder Press',          reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'https://youtu.be/0JfYxMRsUCQ' },
@@ -525,7 +528,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '26';
+var APP_VERSION = '27';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -648,7 +651,7 @@ function gistPull(){
     var get = function(name){ var f = g.files && g.files[name]; if (!f) return Promise.resolve([]);
       if (f.truncated) return fetch(f.raw_url).then(function(r){ return r.json(); });
       try { return Promise.resolve(JSON.parse(f.content || '[]')); } catch(e){ return Promise.resolve([]); } };
-    return Promise.all([get('history.json'), get('program.json'), get('phase-requests.json')]);
+    return Promise.all([get('history.json'), get('program.json'), get('phase-requests.json'), get('phases.json')]);
   }).then(function(r){
     var h = mergeList(HIST, r[0] || [], 'updated');
     HIST = h.list.map(stamp).sort(function(a, b){ return b.started - a.started; }); lsSet(KEY_HIST, HIST);
@@ -658,10 +661,19 @@ function gistPull(){
     else if (PROG && (!rp || PROG.updated > rp.updated)) progExtra = true;
     var pr = mergeList(PHASEREQ, Array.isArray(r[2]) ? r[2] : [], 'updated');
     PHASEREQ = pr.list.sort(function(a, b){ return b.at - a.at; }); lsSet('lbl.phasereq', PHASEREQ);
-    if (h.extra || progExtra || pr.extra) schedulePush();
+    var ph = r[3] && !Array.isArray(r[3]) && r[3].updated ? r[3] : null, phExtra = false;
+    if (ph && ph.updated > PHASEHIDE.updated){ PHASEHIDE = { updated: ph.updated, hidden: ph.hidden || [] }; lsSet('lbl.phasehide', PHASEHIDE); }
+    else if (PHASEHIDE.updated && (!ph || PHASEHIDE.updated > ph.updated)) phExtra = true;
+    if (h.extra || progExtra || pr.extra || phExtra) schedulePush();
     if (S.view !== 'focus' && S.view !== 'exedit' && !settingsBusy()) render();
   }).catch(function(e){ SYNC.state = (e === 401 || e === 403 || e === 404) ? 'auth' : 'offline'; updSync(); });
 }
+var PHASEHIDE = lsGet('lbl.phasehide', { updated: 0, hidden: [] });   // { updated, hidden: [phase ids] }
+function setPhaseHidden(id, hide){
+  var h = PHASEHIDE.hidden.filter(function(x){ return x !== id; }); if (hide) h.push(id);
+  PHASEHIDE = { updated: Date.now(), hidden: h }; lsSet('lbl.phasehide', PHASEHIDE); S.homePhase = null; schedulePush();
+}
+function touchReq(id, f){ PHASEREQ.forEach(function(q){ if (q.id === id){ f(q); q.updated = Date.now(); } }); lsSet('lbl.phasereq', PHASEREQ); schedulePush(); }
 var PHASEREQ = lsGet('lbl.phasereq', []);   // new-phase requests: { id, at, updated, file, name, size, note, status: pending|built|needs-info, builtAs, reply }
 function submitPhaseRequest(file, note){
   S.phaseBusy = true; render();
@@ -681,7 +693,7 @@ function submitPhaseRequest(file, note){
   };
   rd.readAsDataURL(file);
 }
-function settingsBusy(){ var f = $('phasepdf'), n = $('phasenote'); return S.view === 'settings' && ((f && f.files && f.files.length) || (n && n.value)); }
+function settingsBusy(){ var f = $('phasepdf'), n = $('phasenote'), rd = $('redonote'); return S.view === 'settings' && ((f && f.files && f.files.length) || (n && n.value) || (rd && rd.value)); }
 function schedulePush(){ if (!TOKEN) return; clearTimeout(pushT); pushT = setTimeout(gistPush, 1200); }
 function gistPush(){
   if (!TOKEN) return Promise.resolve();
@@ -693,6 +705,7 @@ function gistPush(){
       'history.json': { content: JSON.stringify(HIST, null, 1) } } };
     if (PROG) body.files['program.json'] = { content: JSON.stringify(PROG, null, 1) };
     if (PHASEREQ.length) body.files['phase-requests.json'] = { content: JSON.stringify(PHASEREQ, null, 1) };
+    if (PHASEHIDE.updated) body.files['phases.json'] = { content: JSON.stringify(PHASEHIDE, null, 1) };
     return fetch(GIST_API(), { method: 'PATCH', headers: gistHeaders(true), body: JSON.stringify(body) }).then(function(r){
       if (!r.ok) throw r.status; SYNC.state = 'ok'; SYNC.at = Date.now(); updSync();
     });
@@ -959,7 +972,7 @@ function entryLine(x, r, act){
 function viewHome(){
   var h = '<div class="top"><span class="apptitle"><img src="icon-180.png" alt="" width="40" height="40">Strength Tracker</span><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>' +
     '<h1 class="phase">' + esc(shownPhase().name) + '</h1>';
-  if (PHASES.length > 1) h += '<div class="seg" role="group" aria-label="Phase">' + PHASES.map(function(ph){
+  if (livePhases().length > 1) h += '<div class="seg" role="group" aria-label="Phase">' + livePhases().map(function(ph){
     return '<button data-act="homephase" data-p="' + ph.id + '" aria-pressed="' + (ph.id === shownPhase().id) + '">' + esc(ph.name) + (ph === currentPhase() ? ' · current' : '') + '</button>'; }).join('') + '</div>';
   if (shownPhase() !== currentPhase()) h += '<div class="callout">A previous phase. You can still open and log its sessions. <button class="link" data-act="homephase" data-p="' + currentPhase().id + '" style="padding:0">Back to ' + esc(currentPhase().name) + '</button></div>';
   if (W){
@@ -1231,11 +1244,27 @@ function viewSettings(){
     '<button class="btn primary" data-act="toksave">Save token</button>';
   h += '</details>';
   // New phase from a coach's PDF or Excel sheet
-  var reqs = PHASEREQ.map(function(q){
-    var st = q.status === 'built' ? 'Built as ' + esc(q.builtAs || 'a new phase') : q.status === 'needs-info' ? 'Claude has a question' : 'Waiting for Claude';
+  var reqs = PHASEREQ.filter(function(q){ return !q.deleted; }).map(function(q){
+    var st = q.status === 'built' ? 'Built as ' + esc(q.builtAs || 'a new phase') : q.status === 'needs-info' ? 'Claude has a question' : q.redo ? 'Waiting for Claude to redo' : 'Waiting for Claude';
+    var acts = S.redoReq === q.id
+      ? '<label class="fl"><span>What should Claude change?</span><textarea id="redonote" class="field" placeholder="e.g. Session 2 is missing the plank. Rest should be 90s."></textarea></label>' +
+        '<div class="row"><button class="btn primary" data-act="redosend" data-id="' + q.id + '">Send to Claude</button><button class="btn" data-act="redocancel">Cancel</button></div>'
+      : S.reqDel === q.id
+      ? '<div class="row"><button class="btn danger" data-act="reqdelyes" data-id="' + q.id + '">Delete request</button><button class="btn" data-act="reqdelno">Keep</button></div>'
+      : '<div class="row">' + (q.status !== 'pending' ? '<button class="btn" data-act="redo" data-id="' + q.id + '">Ask Claude to fix</button>' : '') + '<button class="link" data-act="reqdel" data-id="' + q.id + '" style="color:var(--danger)">Delete</button></div>';
     return '<div class="preq"><div class="nhead"><b>' + esc(q.name) + '</b><span class="chip' + (q.status === 'built' ? ' st-fixed' : '') + '">' + st + '</span></div>' +
-      '<span class="ref">Sent ' + fmtDate(q.at) + ' ' + fmtTime(q.at) + (q.note ? ' · note: ' + esc(q.note) : '') + '</span>' + (q.reply ? '<div class="callout">' + esc(q.reply) + '</div>' : '') + '</div>';
+      '<span class="ref">Sent ' + fmtDate(q.at) + ' ' + fmtTime(q.at) + (q.note ? ' · note: ' + esc(q.note) : '') + '</span>' + (q.reply ? '<div class="callout">' + esc(q.reply) + '</div>' : '') + acts + '</div>';
   }).join('');
+  // Your phases: remove (hide) or restore any phase after the first
+  if (PHASES.length > 1) h += '<section class="card"><div><h3>Your phases</h3><span class="muted" style="font-size:14px">To tweak an exercise, open its session and tap Edit. If a phase didn\'t come out right, remove it here or ask Claude to fix it below.</span></div>' +
+    PHASES.map(function(ph, i){
+      var hid = phaseHidden(ph), chip = hid ? 'Removed' : ph === currentPhase() ? 'Current' : '';
+      var act = i === 0 ? '' : hid ? '<button class="btn" data-act="phaseshow" data-p="' + ph.id + '">Restore</button>'
+        : S.phaseDel === ph.id ? '<div class="row"><button class="btn danger" data-act="phasehideyes" data-p="' + ph.id + '">Remove ' + esc(ph.name) + '</button><button class="btn" data-act="phasehideno">Keep</button></div>'
+        : '<button class="link" data-act="phasehide" data-p="' + ph.id + '" style="color:var(--danger);align-self:flex-start">Remove</button>';
+      return '<div class="preq"><div class="nhead"><b>' + esc(ph.name) + '</b>' + (chip ? '<span class="chip' + (chip === 'Current' ? ' st-fixed' : '') + '">' + chip + '</span>' : '') + '</div>' +
+        '<span class="ref">' + esc(ph.focus) + ' · ' + ph.days.length + ' sessions' + (hid ? ' · hidden from Home, workouts kept' : '') + '</span>' + act + '</div>';
+    }).join('') + '</section>';
   h += '<section class="card"><div><h3>New phase</h3><span class="muted" style="font-size:14px">Upload your coach\'s PDF or Excel sheet. Claude reads it and builds ' + esc('Phase ' + (PHASES.length + 1)) + ' like ' + esc(currentPhase().name) + ': sessions, supersets, tempo, rest, warm-ups and a video for every exercise. It becomes your current phase; earlier phases stay on Home.</span></div>' +
     (TOKEN ? '<input id="phasepdf" class="field" type="file" accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx" aria-label="Workout PDF or Excel file">' +
       '<label class="fl"><span>Notes for Claude (optional)</span><textarea id="phasenote" class="field" placeholder="e.g. Ignore the sets column. Session 3 is optional. Rest 90s on lower days."></textarea></label>' +
@@ -1351,6 +1380,18 @@ document.addEventListener('click', function(e){
       var reload = function(){ location.replace(location.pathname + '?r=' + Date.now() + location.hash); };
       (TOKEN ? gistPush() : Promise.resolve()).then(reload, reload); break;
     case 'syncnow': gistPull().then(gistPush); break;
+    case 'phasehide': S.phaseDel = el.getAttribute('data-p'); render(); break;
+    case 'phasehideno': S.phaseDel = null; render(); break;
+    case 'phasehideyes': setPhaseHidden(el.getAttribute('data-p'), true); S.phaseDel = null; render(); toast('Phase removed from Home. Your logged workouts are kept.'); break;
+    case 'phaseshow': setPhaseHidden(el.getAttribute('data-p'), false); render(); toast('Phase restored'); break;
+    case 'redo': S.redoReq = el.getAttribute('data-id'); S.reqDel = null; render(); var rn = $('redonote'); if (rn) rn.focus(); break;
+    case 'redocancel': S.redoReq = null; render(); break;
+    case 'redosend': var rtx = ($('redonote') && $('redonote').value || '').trim(); if (!rtx){ toast('Say what should change'); break; }
+      touchReq(el.getAttribute('data-id'), function(q){ q.status = 'pending'; q.redo = true; q.note = (q.note ? q.note + ' | ' : '') + 'Fix: ' + rtx; q.reply = ''; });
+      S.redoReq = null; render(); toast('Sent. Ask Claude to "build new phase".'); break;
+    case 'reqdel': S.reqDel = el.getAttribute('data-id'); S.redoReq = null; render(); break;
+    case 'reqdelno': S.reqDel = null; render(); break;
+    case 'reqdelyes': touchReq(el.getAttribute('data-id'), function(q){ q.deleted = true; }); S.reqDel = null; render(); toast('Request deleted'); break;
     case 'homephase': S.homePhase = el.getAttribute('data-p') === currentPhase().id ? null : el.getAttribute('data-p'); render(); break;
     case 'phasesend': var pf = $('phasepdf') && $('phasepdf').files[0], pn = ($('phasenote') && $('phasenote').value || '').trim();
       if (!pf){ toast('Choose a PDF or Excel file first'); break; }
