@@ -265,6 +265,11 @@ a{color:var(--ink);text-underline-offset:4px}
 .daycard ol{font-size:15px;gap:6px}
 .daycard li b,.hlist li b{font-family:var(--font-body);font-weight:600;font-size:16px;min-width:30px;color:var(--soft);font-variant-numeric:tabular-nums}
 .banner{background:var(--primary);color:var(--primary-foreground);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
+/* swipe-to-delete tile */
+.swipe{position:relative;border-radius:var(--r-lg);overflow:hidden;background:var(--destructive);flex:none}
+.swdel{position:absolute;top:0;right:0;bottom:0;width:96px;border:0;background:transparent;color:#fff;font:600 15px var(--font-body);cursor:pointer}
+.swfront{position:relative;z-index:1;transition:transform .2s ease;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.swipe.open .swfront{transform:translateX(-96px)}
 .ss{border:1px solid var(--line);box-shadow:var(--shadow-sm),inset 3px 0 0 var(--primary)}
 .ssitem.cur{border:1px solid var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--ring) 35%,transparent)}
 .badge{min-width:48px;height:48px;border-radius:var(--r-md);background:var(--muted);border:1px solid var(--line);font-family:var(--font-body);font-size:22px;font-weight:600;letter-spacing:-.02em}
@@ -469,7 +474,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '17';
+var APP_VERSION = '18';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -881,7 +886,9 @@ function viewHome(){
     '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="history">History</button><button class="link" data-act="feedback">Feedback</button><button class="link" data-act="settings">Settings</button></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
-    h += '<button class="banner" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button>';
+    // tap to resume; slide left to reveal Delete
+    h += '<div class="swipe"><button class="swdel" data-act="wipdel" aria-label="Delete the workout in progress">Delete</button>' +
+      '<button class="banner swfront" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button></div>';
   }
   DAYS.forEach(function(dk){
     var p = PROGRAM[dk], last = hist().filter(function(x){ return x.day === dk; })[0];
@@ -1202,8 +1209,38 @@ var tT = null;
 function toast(msg){ var t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(tT); tT = setTimeout(function(){ t.hidden = true; }, 2200); }
 
 /* ===================== EVENTS ===================== */
+/* Swipe-left tiles (the workout in progress on Home): drag left to reveal Delete, drag back or tap to close. */
+var SW = null, swJustMoved = false, SW_W = 96;
+document.addEventListener('pointerdown', function(e){
+  var f = e.target.closest('.swfront'); if (!f) return;
+  var box = f.parentNode;
+  SW = { f: f, box: box, x: e.clientX, y: e.clientY, base: box.classList.contains('open') ? -SW_W : 0, dx: 0, moved: false };
+});
+document.addEventListener('pointermove', function(e){
+  if (!SW) return;
+  var dx = e.clientX - SW.x, dy = e.clientY - SW.y;
+  if (!SW.moved){ if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return; SW.moved = true; SW.f.style.transition = 'none'; }
+  SW.dx = Math.min(0, Math.max(-SW_W - 24, SW.base + dx));
+  SW.f.style.transform = 'translateX(' + SW.dx + 'px)';
+});
+var swEnd = function(){
+  if (!SW) return;
+  if (SW.moved){
+    SW.f.style.transition = ''; SW.f.style.transform = '';
+    SW.box.classList.toggle('open', SW.dx < -SW_W / 2);
+    swJustMoved = true; setTimeout(function(){ swJustMoved = false; }, 60);
+  }
+  SW = null;
+};
+document.addEventListener('pointerup', swEnd);
+document.addEventListener('pointercancel', swEnd);
 document.addEventListener('click', function(e){
   var el = e.target.closest('[data-act]'); if (!el) return;
+  if (el.classList.contains('swfront')){
+    if (swJustMoved){ e.preventDefault(); return; }
+    // a tap on an open tile closes it rather than resuming
+    if (el.parentNode.classList.contains('open')){ el.parentNode.classList.remove('open'); return; }
+  }
   unlockAudio();
   var a = el.getAttribute('data-act');
   var go = function(v){ S.view = v; S.confirm = false; S.confirmDel = false; S.editing = false; render(); scrollTo(0, 0); };
@@ -1268,6 +1305,7 @@ document.addEventListener('click', function(e){
     case 'keep': S.confirm = false; render(); break;
     case 'finish': finishWorkout(); break;
     case 'discard': var kept = archiveWorkout(); go('home'); toast(kept ? 'Moved to the archive' : 'Workout discarded, no sets were done'); break;
+    case 'wipdel': var kept2 = archiveWorkout(); go('home'); toast(kept2 ? 'Workout deleted. Its done sets are kept in the archive.' : 'Workout deleted'); break;
     case 'togglearch': S.showArch = !S.showArch; render(); break;
     case 'histday': var hd = el.getAttribute('data-day'); S.histDay = S.histDay === hd ? null : hd; render(); break;
     case 'histmonth': var hm = new Date((S.histMonth || dayKey(new Date()).slice(0, 7)) + '-01T12:00'); hm.setMonth(hm.getMonth() + +el.getAttribute('data-d'));
