@@ -266,8 +266,9 @@ a{color:var(--ink);text-underline-offset:4px}
 .daycard li b,.hlist li b{font-family:var(--font-body);font-weight:600;font-size:16px;min-width:30px;color:var(--soft);font-variant-numeric:tabular-nums}
 .banner{background:var(--primary);color:var(--primary-foreground);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
 /* Home: app title, phase heading, collapsible session rows */
-.apptitle{font-size:15px;font-weight:600;color:var(--soft)}
-.phase{margin-top:-10px}
+.apptitle{display:flex;align-items:center;gap:10px;font-size:clamp(22px,6.6vw,30px);line-height:1.1;font-weight:700;letter-spacing:-.03em;color:var(--ink);min-width:0;white-space:nowrap}
+.apptitle img{flex:none;width:40px;height:40px;border-radius:10px}
+.phase{font-size:20px;line-height:1.2;margin-top:-4px;color:var(--soft)}
 .seclabel{text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:-8px}
 .sessions{padding:0;gap:0;overflow:hidden}
 .sess+.sess{border-top:1px solid var(--line)}
@@ -494,7 +495,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '21';
+var APP_VERSION = '22';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -903,7 +904,7 @@ function entryLine(x, r, act){
 }
 
 function viewHome(){
-  var h = '<div class="top"><span class="apptitle">Strength Tracker</span><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>' +
+  var h = '<div class="top"><span class="apptitle"><img src="icon-180.png" alt="" width="40" height="40">Strength Tracker</span><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>' +
     '<h1 class="phase">Phase 1</h1>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
