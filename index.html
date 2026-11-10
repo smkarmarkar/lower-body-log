@@ -332,7 +332,7 @@ a{color:var(--ink);text-underline-offset:4px}
 .thread .claude .by{color:var(--ink)}
 .vlink{border-radius:var(--r-lg)}
 .video{border-radius:var(--r-lg)}
-/* Activity card (History): one month, Monday to Sunday rows, weekly count column */
+/* Activity card (History): one month, Monday to Sunday rows */
 .act{gap:12px}
 .act .eyebrow{text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--ink)}
 .actcount{display:flex;align-items:baseline;gap:8px;margin:-4px 0 2px}
@@ -342,7 +342,7 @@ a{color:var(--ink);text-underline-offset:4px}
 .calnav .muted{font-size:13px}
 .calnav .iconbtn:disabled{opacity:.35;cursor:default}
 .calnav .next svg{transform:scaleX(-1)}
-.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) 30px;gap:6px;justify-items:center;align-items:center}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;justify-items:center;align-items:center}
 .calh{font-size:12px;font-weight:500;color:var(--soft)}
 .dot{width:100%;max-width:38px;aspect-ratio:1;border-radius:50%;padding:0;border:0;display:grid;place-items:center;font:500 13px var(--font-body);font-variant-numeric:tabular-nums;color:var(--soft)}
 .dot.off{background:var(--muted)}
@@ -351,9 +351,6 @@ a{color:var(--ink);text-underline-offset:4px}
 .dot.today{box-shadow:inset 0 0 0 1.5px var(--soft);color:var(--ink)}
 .dot.on.today{box-shadow:none;color:#fff}
 .dot.sel{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--chart-1)}
-.calwk{width:26px;height:26px;border-radius:var(--r-sm);display:grid;place-items:center;font-size:13px;font-weight:600;color:var(--soft);font-variant-numeric:tabular-nums}
-.calwk.has{color:var(--ink);background:var(--muted)}
-.calwk.cur{box-shadow:inset 0 0 0 1.5px var(--chart-1)}
 /* ===================== /shadcn/ui ===================== */
 @media (max-width:360px){.card{padding:14px}.sets input{font-size:18px;padding:0 8px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -470,7 +467,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '15';
+var APP_VERSION = '16';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -539,6 +536,14 @@ function lsGet(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.par
 function lsSet(k, v){ try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
 
 var S = { view: 'home', day: 'u1', rec: null, confirm: false, confirmDel: false };
+// Theme from Settings: 'system' follows the phone, 'light' or 'dark' forces one (the THEME block reads data-theme)
+function applyTheme(t){
+  var r = document.documentElement;
+  if (t === 'light' || t === 'dark') r.setAttribute('data-theme', t); else r.removeAttribute('data-theme');
+  var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){ m.setAttribute('content', dark ? '#09090b' : '#ffffff'); });
+}
+applyTheme(lsGet('lbl.theme', 'system'));
 var W = lsGet(KEY_ACTIVE, null);          // the workout in progress
 var PLAN = lsGet(KEY_PLAN, {});           // edits made on the overview before starting
 var HIST = lsGet(KEY_HIST, []);           // finished workouts (mirrored to claude.ai when available)
@@ -1074,14 +1079,13 @@ function activityCard(){
     '<div class="calnav"><button class="iconbtn" data-act="histmonth" data-d="-1" aria-label="Previous month"' + (mk <= first ? ' disabled' : '') + '>' + ICON.back + '</button>' +
     '<div><b>' + esc(monthLabel) + '</b><br><span class="muted">' + monthCount + (monthCount === 1 ? ' active day' : ' active days') + '</span></div>' +
     '<button class="iconbtn next" data-act="histmonth" data-d="1" aria-label="Next month"' + (mk >= today.slice(0, 7) ? ' disabled' : '') + '>' + ICON.back + '</button></div>';
-  var heads = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function(d){ return '<span class="calh">' + d + '</span>'; }).join('') + '<span class="calh">Wk</span>';
+  var heads = ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(function(d){ return '<span class="calh">' + d + '</span>'; }).join('');
   var cells = '', start = weekStart(new Date(y, m, 1)), lastDay = new Date(y, m + 1, 0);
   for (var w = new Date(start); w <= lastDay; w.setDate(w.getDate() + 7)){
-    var count = 0, row = '';
+    var row = '';
     for (var dd = 0; dd < 7; dd++){
       var d = new Date(w); d.setDate(w.getDate() + dd);
       var k = dayKey(d);
-      if (active[k]) count++;
       if (d.getMonth() !== m){ row += '<span></span>'; continue; }
       var cls = active[k] ? 'on' : k > today ? 'future' : 'off';
       if (k === S.histDay) cls += ' sel';
@@ -1090,8 +1094,7 @@ function activityCard(){
       row += active[k] ? '<button class="dot ' + cls + '" data-act="histday" data-day="' + k + '" aria-label="' + esc(label) + ', strength session"' + (k === S.histDay ? ' aria-pressed="true"' : '') + '>' + d.getDate() + '</button>'
         : '<span class="dot ' + cls + '" aria-label="' + esc(label) + '">' + d.getDate() + '</span>';
     }
-    var thisWk = dayKey(w) === dayKey(wk);
-    cells += row + '<span class="calwk' + (count ? ' has' : '') + (thisWk ? ' cur' : '') + '" aria-label="' + count + ' active days this week">' + count + '</span>';
+    cells += row;
   }
   return h + '<div class="cal">' + heads + cells + '</div></section>';
 }
@@ -1123,7 +1126,10 @@ function ctxText(c){
   return [v, c.workout, c.exercise, c.set ? 'set ' + c.set : '', c.phase].filter(Boolean).join(' · ');
 }
 function viewSettings(){
-  var h = topBar('Settings', 'home', refreshBtn());
+  var h = topBar('Settings', 'home', refreshBtn()), th = lsGet('lbl.theme', 'system');
+  h += '<section class="card"><div><h3>Appearance</h3><span class="muted" style="font-size:14px">System follows your phone\'s light or dark setting.</span></div>' +
+    '<div class="seg" role="group" aria-label="Theme">' + [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(function(x){
+      return '<button data-act="theme" data-t="' + x[0] + '" aria-pressed="' + (th === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></section>';
   h += '<section class="card"><div><h3>Backup</h3><div class="note sync" id="syncnote" style="text-align:left;padding:0">' + esc(syncText()) + '</div></div>';
   if (TOKEN) h += '<span class="muted" style="font-size:14px">A GitHub token is saved on this phone. Your workouts go to your secret Gist automatically.</span>' +
     '<div class="row"><button class="btn primary" data-act="syncnow">Sync now</button><button class="btn danger" data-act="tokdel">Remove token</button></div>';
@@ -1210,6 +1216,7 @@ document.addEventListener('click', function(e){
       var reload = function(){ location.replace(location.pathname + '?r=' + Date.now() + location.hash); };
       (TOKEN ? gistPush() : Promise.resolve()).then(reload, reload); break;
     case 'syncnow': gistPull().then(gistPush); break;
+    case 'theme': var tv2 = el.getAttribute('data-t'); lsSet('lbl.theme', tv2 === 'system' ? null : tv2); applyTheme(tv2); render(); break;
     case 'toksave': var tv = ($('tok').value || '').trim(); if (!tv) { toast('Paste the token first'); break; }
       TOKEN = tv; lsSet('lbl.token', TOKEN); SYNC.pulled = false; render();
       gistPull().then(function(){ if (SYNC.state === 'ok'){ toast('Connected to your Gist'); gistPush(); } else toast(syncText()); render(); }); break;
