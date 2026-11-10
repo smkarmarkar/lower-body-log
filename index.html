@@ -282,6 +282,7 @@ a{color:var(--ink);text-underline-offset:4px}
 .sessbody ol{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:15px}
 .sessbody li{display:flex;gap:10px;align-items:baseline}
 .sessbody li b{min-width:30px;font-weight:600;font-size:16px;color:var(--soft);font-variant-numeric:tabular-nums}
+.preq{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:12px}
 /* a card that opens another screen */
 .navcard{flex-direction:row;align-items:center;justify-content:space-between;text-align:left;width:100%;cursor:pointer;font:inherit;color:inherit}
 .navcard:hover{background:color-mix(in srgb,var(--muted) 50%,var(--card))}
@@ -394,7 +395,15 @@ a{color:var(--ink);text-underline-offset:4px}
    Sets: the coach's 3,3,3,2 weekly column is ignored for now; main lifts get 3 sets, core and carries 2.
    d1 and d2 keep their old keys so past Lower 1 / Lower 2 workouts still line up. */
 var PROGRAM_REV = 2;   // bump when the program below changes, so old in-app edits don't override it
-var DAYS = ['u1', 'd1', 'u2', 'd2'];
+/* Phases: each lists its session keys (unique across phases). The last phase is the current one.
+   New phases are built by Claude from a coach's PDF sent from Settings ("build new phase", see CLAUDE.md in the repo).
+   Reuse an exercise's id when it appears again, so its last-time weights carry over. */
+var PHASES = [
+  { id: 'p1', name: 'Phase 1', focus: 'Hypertrophy', days: ['u1', 'd1', 'u2', 'd2'] }
+];
+var DAYS = []; PHASES.forEach(function(ph){ DAYS.push.apply(DAYS, ph.days); });
+function currentPhase(){ return PHASES[PHASES.length - 1]; }
+function shownPhase(){ return PHASES.filter(function(ph){ return ph.id === S.homePhase; })[0] || currentPhase(); }
 var PROGRAM = {
   u1: { label: 'Session 1', name: 'Upper 1', warmup: 'Cat-camel x 10, book opener x 10 each, roller back extension x 10, shoulder circumduction x 10, prone W raise x 10, scapular push-up x 10, shoulder external rotation x 10 each', items: [
     { no:'1',  id:'db-shoulder-press', name:'DB Shoulder Press',          reps:'8',      sets:3, tempo:'311', rir:'1-2', rest:60, url:'https://youtu.be/0JfYxMRsUCQ' },
@@ -495,7 +504,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '23';
+var APP_VERSION = '24';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -618,7 +627,7 @@ function gistPull(){
     var get = function(name){ var f = g.files && g.files[name]; if (!f) return Promise.resolve([]);
       if (f.truncated) return fetch(f.raw_url).then(function(r){ return r.json(); });
       try { return Promise.resolve(JSON.parse(f.content || '[]')); } catch(e){ return Promise.resolve([]); } };
-    return Promise.all([get('history.json'), get('program.json')]);
+    return Promise.all([get('history.json'), get('program.json'), get('phase-requests.json')]);
   }).then(function(r){
     var h = mergeList(HIST, r[0] || [], 'updated');
     HIST = h.list.map(stamp).sort(function(a, b){ return b.started - a.started; }); lsSet(KEY_HIST, HIST);
@@ -626,10 +635,32 @@ function gistPull(){
     var rp = r[1] && !Array.isArray(r[1]) && r[1].updated && r[1].rev === PROGRAM_REV ? r[1] : null, progExtra = false;
     if (rp && (!PROG || rp.updated > PROG.updated)){ PROG = rp; lsSet('lbl.program', PROG); applyProg(W ? W.day : null); }
     else if (PROG && (!rp || PROG.updated > rp.updated)) progExtra = true;
-    if (h.extra || progExtra) schedulePush();
-    if (S.view !== 'focus' && S.view !== 'exedit') render();
+    var pr = mergeList(PHASEREQ, Array.isArray(r[2]) ? r[2] : [], 'updated');
+    PHASEREQ = pr.list.sort(function(a, b){ return b.at - a.at; }); lsSet('lbl.phasereq', PHASEREQ);
+    if (h.extra || progExtra || pr.extra) schedulePush();
+    if (S.view !== 'focus' && S.view !== 'exedit' && !settingsBusy()) render();
   }).catch(function(e){ SYNC.state = (e === 401 || e === 403 || e === 404) ? 'auth' : 'offline'; updSync(); });
 }
+var PHASEREQ = lsGet('lbl.phasereq', []);   // new-phase requests: { id, at, updated, file, name, size, note, status: pending|built|needs-info, builtAs, reply }
+function submitPhaseRequest(file, note){
+  S.phaseBusy = true; render();
+  var rd = new FileReader();
+  rd.onerror = function(){ S.phaseBusy = false; render(); toast('Could not read that file'); };
+  rd.onload = function(){
+    var id = 'ph' + Date.now(), fname = 'phase-request-' + id + '.pdf.b64', b64 = String(rd.result).split(',')[1] || '';
+    var req = { id: id, at: Date.now(), updated: Date.now(), file: fname, name: file.name, size: file.size, note: note, status: 'pending' };
+    (GIST_ID ? Promise.resolve() : findGist()).then(function(){
+      var body = { files: {} }; body.files[fname] = { content: b64 };
+      return fetch(GIST_API(), { method: 'PATCH', headers: gistHeaders(true), body: JSON.stringify(body) });
+    }).then(function(r){
+      if (!r.ok) throw r.status;
+      PHASEREQ.unshift(req); lsSet('lbl.phasereq', PHASEREQ); return gistPush();
+    }).then(function(){ S.phaseBusy = false; render(); toast('Sent. Ask Claude to "build new phase".'); },
+      function(){ S.phaseBusy = false; render(); toast('Could not upload. Check your connection and token.'); });
+  };
+  rd.readAsDataURL(file);
+}
+function settingsBusy(){ var f = $('phasepdf'), n = $('phasenote'); return S.view === 'settings' && ((f && f.files && f.files.length) || (n && n.value)); }
 function schedulePush(){ if (!TOKEN) return; clearTimeout(pushT); pushT = setTimeout(gistPush, 1200); }
 function gistPush(){
   if (!TOKEN) return Promise.resolve();
@@ -640,6 +671,7 @@ function gistPush(){
     var body = { files: {
       'history.json': { content: JSON.stringify(HIST, null, 1) } } };
     if (PROG) body.files['program.json'] = { content: JSON.stringify(PROG, null, 1) };
+    if (PHASEREQ.length) body.files['phase-requests.json'] = { content: JSON.stringify(PHASEREQ, null, 1) };
     return fetch(GIST_API(), { method: 'PATCH', headers: gistHeaders(true), body: JSON.stringify(body) }).then(function(r){
       if (!r.ok) throw r.status; SYNC.state = 'ok'; SYNC.at = Date.now(); updSync();
     });
@@ -905,7 +937,10 @@ function entryLine(x, r, act){
 
 function viewHome(){
   var h = '<div class="top"><span class="apptitle"><img src="icon-180.png" alt="" width="40" height="40">Strength Tracker</span><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>' +
-    '<h1 class="phase">Phase 1</h1>';
+    '<h1 class="phase">' + esc(shownPhase().name) + '</h1>';
+  if (PHASES.length > 1) h += '<div class="seg" role="group" aria-label="Phase">' + PHASES.map(function(ph){
+    return '<button data-act="homephase" data-p="' + ph.id + '" aria-pressed="' + (ph.id === shownPhase().id) + '">' + esc(ph.name) + (ph === currentPhase() ? ' · current' : '') + '</button>'; }).join('') + '</div>';
+  if (shownPhase() !== currentPhase()) h += '<div class="callout">A previous phase. You can still open and log its sessions. <button class="link" data-act="homephase" data-p="' + currentPhase().id + '" style="padding:0">Back to ' + esc(currentPhase().name) + '</button></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
     // tap to resume; slide left to reveal Delete
@@ -913,7 +948,7 @@ function viewHome(){
       '<button class="banner swfront" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button></div>';
   }
   // one collapsed row per session; tap to see its details, then Open to start
-  h += '<div class="eyebrow seclabel">Hypertrophy</div><section class="card sessions">' + DAYS.map(function(dk){
+  h += '<div class="eyebrow seclabel">' + esc(shownPhase().focus) + '</div><section class="card sessions">' + shownPhase().days.map(function(dk){
     var p = PROGRAM[dk], last = hist().filter(function(x){ return x.day === dk; })[0], n = p.items.length;
     return '<details class="sess" data-dk="' + dk + '"' + (S.homeOpen && S.homeOpen[dk] ? ' open' : '') + '><summary><span><b>' + p.label + ': ' + esc(p.name) + '</b> <span class="muted">(' + n + (n === 1 ? ' exercise' : ' exercises') + ')</span></span></summary>' +
       '<div class="sessbody"><div class="meta"><span>about ' + estMinutes(dk) + ' min</span><span>' + (last ? 'Last done ' + fmtDate(last.started) : 'Not done yet') + '</span></div>' +
@@ -1174,6 +1209,18 @@ function viewSettings(){
     '<input id="tok" class="field" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub token">' +
     '<button class="btn primary" data-act="toksave">Save token</button>';
   h += '</details>';
+  // New phase from a coach's PDF
+  var reqs = PHASEREQ.map(function(q){
+    var st = q.status === 'built' ? 'Built as ' + esc(q.builtAs || 'a new phase') : q.status === 'needs-info' ? 'Claude has a question' : 'Waiting for Claude';
+    return '<div class="preq"><div class="nhead"><b>' + esc(q.name) + '</b><span class="chip' + (q.status === 'built' ? ' st-fixed' : '') + '">' + st + '</span></div>' +
+      '<span class="ref">Sent ' + fmtDate(q.at) + ' ' + fmtTime(q.at) + (q.note ? ' · note: ' + esc(q.note) : '') + '</span>' + (q.reply ? '<div class="callout">' + esc(q.reply) + '</div>' : '') + '</div>';
+  }).join('');
+  h += '<section class="card"><div><h3>New phase</h3><span class="muted" style="font-size:14px">Upload your coach\'s PDF. Claude reads it and builds ' + esc('Phase ' + (PHASES.length + 1)) + ' like ' + esc(currentPhase().name) + ': sessions, supersets, tempo, rest, warm-ups and a video for every exercise. It becomes your current phase; earlier phases stay on Home.</span></div>' +
+    (TOKEN ? '<input id="phasepdf" class="field" type="file" accept="application/pdf,.pdf" aria-label="Workout PDF">' +
+      '<label class="fl"><span>Notes for Claude (optional)</span><textarea id="phasenote" class="field" placeholder="e.g. Ignore the sets column. Session 3 is optional. Rest 90s on lower days."></textarea></label>' +
+      '<button class="btn primary block" data-act="phasesend"' + (S.phaseBusy ? ' disabled' : '') + '>' + (S.phaseBusy ? 'Sending…' : 'Send to Claude') + '</button>' +
+      '<span class="ref">Then tell Claude "build new phase". The PDF goes to your private backup, not the public app.</span>'
+      : '<div class="callout">Add your GitHub token under Backup first, so the PDF can go to your private backup.</div>') + reqs + '</section>';
   h += '<section class="card"><div><h3>Feedback</h3><span class="muted" style="font-size:14px">Tap the bug button on any screen to report a bug or share an idea. Notes go to Bugbox, where you review them.</span></div><button class="btn" data-act="feedback">Send feedback</button></section>';
   h += '<div class="note">Version ' + APP_VERSION + '</div>';
   return h;
@@ -1283,6 +1330,12 @@ document.addEventListener('click', function(e){
       var reload = function(){ location.replace(location.pathname + '?r=' + Date.now() + location.hash); };
       (TOKEN ? gistPush() : Promise.resolve()).then(reload, reload); break;
     case 'syncnow': gistPull().then(gistPush); break;
+    case 'homephase': S.homePhase = el.getAttribute('data-p') === currentPhase().id ? null : el.getAttribute('data-p'); render(); break;
+    case 'phasesend': var pf = $('phasepdf') && $('phasepdf').files[0], pn = ($('phasenote') && $('phasenote').value || '').trim();
+      if (!pf){ toast('Choose a PDF first'); break; }
+      if (!/\.pdf$/i.test(pf.name) && pf.type !== 'application/pdf'){ toast('That file isn\'t a PDF'); break; }
+      if (pf.size > 2 * 1024 * 1024){ toast('The PDF is over 2 MB'); break; }
+      submitPhaseRequest(pf, pn); break;
     case 'theme': var tv2 = el.getAttribute('data-t'); lsSet('lbl.theme', tv2 === 'system' ? null : tv2); applyTheme(tv2); render(); break;
     case 'toksave': var tv = ($('tok').value || '').trim(); if (!tv) { toast('Paste the token first'); break; }
       TOKEN = tv; lsSet('lbl.token', TOKEN); SYNC.pulled = false; render();
