@@ -313,11 +313,13 @@ a{color:var(--ink);text-underline-offset:4px}
 .confirm>b{color:var(--destructive)}
 
 /* Accordion: warm-up */
-.warm summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.warm summary::-webkit-details-marker{display:none}
+.warm summary,.fold summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;cursor:pointer}
+.warm summary::-webkit-details-marker,.fold summary::-webkit-details-marker{display:none}
 .warm summary b{font-weight:500}
-.warm summary::after{content:"";flex:none;width:7px;height:7px;margin-right:4px;border-right:2px solid var(--soft);border-bottom:2px solid var(--soft);transform:translateY(-2px) rotate(45deg);transition:transform .2s}
-.warm[open] summary::after{transform:translateY(2px) rotate(-135deg)}
+.warm summary::after,.fold summary::after{content:"";flex:none;width:7px;height:7px;margin-right:4px;border-right:2px solid var(--soft);border-bottom:2px solid var(--soft);transform:translateY(-2px) rotate(45deg);transition:transform .2s}
+.warm[open] summary::after,.fold[open] summary::after{transform:translateY(2px) rotate(-135deg)}
+.fold summary .note{padding-bottom:0}
+.fold:not([open]){padding-bottom:20px}
 
 /* Timers */
 .ring .bgc{stroke:var(--muted)}
@@ -467,7 +469,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '16';
+var APP_VERSION = '17';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -1130,13 +1132,13 @@ function viewSettings(){
   h += '<section class="card"><div><h3>Appearance</h3><span class="muted" style="font-size:14px">System follows your phone\'s light or dark setting.</span></div>' +
     '<div class="seg" role="group" aria-label="Theme">' + [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(function(x){
       return '<button data-act="theme" data-t="' + x[0] + '" aria-pressed="' + (th === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></section>';
-  h += '<section class="card"><div><h3>Backup</h3><div class="note sync" id="syncnote" style="text-align:left;padding:0">' + esc(syncText()) + '</div></div>';
+  h += '<details class="card fold"><summary><div><h3>Backup</h3><div class="note sync" id="syncnote" style="text-align:left;padding:0">' + esc(syncText()) + '</div></div></summary>';
   if (TOKEN) h += '<span class="muted" style="font-size:14px">A GitHub token is saved on this phone. Your workouts go to your secret Gist automatically.</span>' +
     '<div class="row"><button class="btn primary" data-act="syncnow">Sync now</button><button class="btn danger" data-act="tokdel">Remove token</button></div>';
   else h += '<ol class="steps"><li>On github.com go to Settings, Developer settings, Fine-grained tokens, Generate new token.</li><li>Name it "Lower Body Log", pick an expiry, and under Account permissions set <b>Gists</b> to Read and write. Nothing else.</li><li>Copy the token and paste it below. It stays on this phone. Don\'t send it to anyone, including Claude.</li></ol>' +
     '<input id="tok" class="field" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub token">' +
     '<button class="btn primary" data-act="toksave">Save token</button>';
-  h += '</section>';
+  h += '</details>';
   h += '<section class="card"><div><h3>Feedback</h3><span class="muted" style="font-size:14px">Tap the bug button on any screen to report a bug or share an idea. Notes go to Bugbox, where you review them.</span></div><button class="btn" data-act="feedback">Send feedback</button></section>';
   h += '<div class="note">Version ' + APP_VERSION + '</div>';
   return h;
