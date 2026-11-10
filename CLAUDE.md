@@ -28,11 +28,11 @@ Inside `index.html`:
 
 Notes come from the shared Bugbox widget (https://github.com/smkarmarkar/bugbox), with app id `strength-log`. The app loads it at the end of `index.html` and passes the current screen as context. The steps for handling approved notes are in Bugbox's `CLAUDE.md`. The old notes in the Gist's `feedback.json` were copied into Bugbox on 2026-11-08, and the app no longer reads or writes that file.
 
-## New phase from a PDF ("build new phase")
+## New phase from a PDF or Excel sheet ("build new phase")
 
-Sandeep uploads a coach PDF in Settings → New phase, with an optional note. The app saves the PDF to the Gist as `phase-request-<id>.pdf.b64` (a data URL) and adds an entry to `phase-requests.json`: `{id, at, updated, file, name, size, note, status: pending|built|needs-info, builtAs, reply}`.
+Sandeep uploads a coach PDF or .xlsx in Settings → New phase, with an optional note. The app saves the file to the Gist as `phase-request-<id>.pdf.b64` or `phase-request-<id>.xlsx.b64` (base64) and adds an entry to `phase-requests.json`: `{id, at, updated, file, name, size, note, status: pending|built|needs-info, builtAs, reply}`.
 
-1. Read the Gist (ask Sandeep for the ID). Take each `pending` request, decode its `.pdf.b64`, and read the PDF together with the `note`. The note wins over the PDF.
+1. Read the Gist (ask Sandeep for the ID). Take each `pending` request, decode its `.b64` file, and read the PDF or spreadsheet (every sheet) together with the `note`. The note wins over the file.
 2. Build the sessions exactly like Phase 1: new `PROGRAM` keys (`p2s1`, `p2s2`, …), blocks with superset numbers (A1/A2 → `7A`/`7B`), sets, reps, tempo, RIR, rest, warm-up text, and hold timers.
 3. Reuse an existing exercise `id` when it is the same exercise, so "Last time" weights carry over. New exercises get new ids.
 4. Every exercise needs a video: search YouTube for a short vertical demo with high views, and check that it plays (oEmbed).

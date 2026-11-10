@@ -396,7 +396,7 @@ a{color:var(--ink);text-underline-offset:4px}
    d1 and d2 keep their old keys so past Lower 1 / Lower 2 workouts still line up. */
 var PROGRAM_REV = 2;   // bump when the program below changes, so old in-app edits don't override it
 /* Phases: each lists its session keys (unique across phases). The last phase is the current one.
-   New phases are built by Claude from a coach's PDF sent from Settings ("build new phase", see CLAUDE.md in the repo).
+   New phases are built by Claude from a coach's PDF or .xlsx sent from Settings ("build new phase", see CLAUDE.md in the repo).
    Reuse an exercise's id when it appears again, so its last-time weights carry over. */
 var PHASES = [
   { id: 'p1', name: 'Phase 1', focus: 'Hypertrophy', days: ['u1', 'd1', 'u2', 'd2'] }
@@ -504,7 +504,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '24';
+var APP_VERSION = '25';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -647,7 +647,7 @@ function submitPhaseRequest(file, note){
   var rd = new FileReader();
   rd.onerror = function(){ S.phaseBusy = false; render(); toast('Could not read that file'); };
   rd.onload = function(){
-    var id = 'ph' + Date.now(), fname = 'phase-request-' + id + '.pdf.b64', b64 = String(rd.result).split(',')[1] || '';
+    var id = 'ph' + Date.now(), fname = 'phase-request-' + id + '.' + (/\.xlsx$/i.test(file.name) ? 'xlsx' : 'pdf') + '.b64', b64 = String(rd.result).split(',')[1] || '';
     var req = { id: id, at: Date.now(), updated: Date.now(), file: fname, name: file.name, size: file.size, note: note, status: 'pending' };
     (GIST_ID ? Promise.resolve() : findGist()).then(function(){
       var body = { files: {} }; body.files[fname] = { content: b64 };
@@ -1209,18 +1209,18 @@ function viewSettings(){
     '<input id="tok" class="field" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="github_pat_…" aria-label="GitHub token">' +
     '<button class="btn primary" data-act="toksave">Save token</button>';
   h += '</details>';
-  // New phase from a coach's PDF
+  // New phase from a coach's PDF or Excel sheet
   var reqs = PHASEREQ.map(function(q){
     var st = q.status === 'built' ? 'Built as ' + esc(q.builtAs || 'a new phase') : q.status === 'needs-info' ? 'Claude has a question' : 'Waiting for Claude';
     return '<div class="preq"><div class="nhead"><b>' + esc(q.name) + '</b><span class="chip' + (q.status === 'built' ? ' st-fixed' : '') + '">' + st + '</span></div>' +
       '<span class="ref">Sent ' + fmtDate(q.at) + ' ' + fmtTime(q.at) + (q.note ? ' · note: ' + esc(q.note) : '') + '</span>' + (q.reply ? '<div class="callout">' + esc(q.reply) + '</div>' : '') + '</div>';
   }).join('');
-  h += '<section class="card"><div><h3>New phase</h3><span class="muted" style="font-size:14px">Upload your coach\'s PDF. Claude reads it and builds ' + esc('Phase ' + (PHASES.length + 1)) + ' like ' + esc(currentPhase().name) + ': sessions, supersets, tempo, rest, warm-ups and a video for every exercise. It becomes your current phase; earlier phases stay on Home.</span></div>' +
-    (TOKEN ? '<input id="phasepdf" class="field" type="file" accept="application/pdf,.pdf" aria-label="Workout PDF">' +
+  h += '<section class="card"><div><h3>New phase</h3><span class="muted" style="font-size:14px">Upload your coach\'s PDF or Excel sheet. Claude reads it and builds ' + esc('Phase ' + (PHASES.length + 1)) + ' like ' + esc(currentPhase().name) + ': sessions, supersets, tempo, rest, warm-ups and a video for every exercise. It becomes your current phase; earlier phases stay on Home.</span></div>' +
+    (TOKEN ? '<input id="phasepdf" class="field" type="file" accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx" aria-label="Workout PDF or Excel file">' +
       '<label class="fl"><span>Notes for Claude (optional)</span><textarea id="phasenote" class="field" placeholder="e.g. Ignore the sets column. Session 3 is optional. Rest 90s on lower days."></textarea></label>' +
       '<button class="btn primary block" data-act="phasesend"' + (S.phaseBusy ? ' disabled' : '') + '>' + (S.phaseBusy ? 'Sending…' : 'Send to Claude') + '</button>' +
-      '<span class="ref">Then tell Claude "build new phase". The PDF goes to your private backup, not the public app.</span>'
-      : '<div class="callout">Add your GitHub token under Backup first, so the PDF can go to your private backup.</div>') + reqs + '</section>';
+      '<span class="ref">Then tell Claude "build new phase". The file goes to your private backup, not the public app.</span>'
+      : '<div class="callout">Add your GitHub token under Backup first, so the file can go to your private backup.</div>') + reqs + '</section>';
   h += '<section class="card"><div><h3>Feedback</h3><span class="muted" style="font-size:14px">Tap the bug button on any screen to report a bug or share an idea. Notes go to Bugbox, where you review them.</span></div><button class="btn" data-act="feedback">Send feedback</button></section>';
   h += '<div class="note">Version ' + APP_VERSION + '</div>';
   return h;
@@ -1332,9 +1332,9 @@ document.addEventListener('click', function(e){
     case 'syncnow': gistPull().then(gistPush); break;
     case 'homephase': S.homePhase = el.getAttribute('data-p') === currentPhase().id ? null : el.getAttribute('data-p'); render(); break;
     case 'phasesend': var pf = $('phasepdf') && $('phasepdf').files[0], pn = ($('phasenote') && $('phasenote').value || '').trim();
-      if (!pf){ toast('Choose a PDF first'); break; }
-      if (!/\.pdf$/i.test(pf.name) && pf.type !== 'application/pdf'){ toast('That file isn\'t a PDF'); break; }
-      if (pf.size > 2 * 1024 * 1024){ toast('The PDF is over 2 MB'); break; }
+      if (!pf){ toast('Choose a PDF or Excel file first'); break; }
+      if (!/\.(pdf|xlsx)$/i.test(pf.name)){ toast('Use a PDF or .xlsx file'); break; }
+      if (pf.size > 2 * 1024 * 1024){ toast('The file is over 2 MB'); break; }
       submitPhaseRequest(pf, pn); break;
     case 'theme': var tv2 = el.getAttribute('data-t'); lsSet('lbl.theme', tv2 === 'system' ? null : tv2); applyTheme(tv2); render(); break;
     case 'toksave': var tv = ($('tok').value || '').trim(); if (!tv) { toast('Paste the token first'); break; }
