@@ -394,12 +394,13 @@ a{color:var(--ink);text-underline-offset:4px}
    tempo "311" = 3s lowering, 1s pause, 1s lifting. hold = seconds for timed holds. rir = reps in reserve.
    Sets: the coach's 3,3,3,2 weekly column is ignored for now; main lifts get 3 sets, core and carries 2.
    d1 and d2 keep their old keys so past Lower 1 / Lower 2 workouts still line up. */
-var PROGRAM_REV = 2;   // bump when the program below changes, so old in-app edits don't override it
+var PROGRAM_REV = 3;   // bump when the program below changes, so old in-app edits don't override it
 /* Phases: each lists its session keys (unique across phases). The last phase is the current one.
    New phases are built by Claude from a coach's PDF or .xlsx sent from Settings ("build new phase", see CLAUDE.md in the repo).
    Reuse an exercise's id when it appears again, so its last-time weights carry over. */
 var PHASES = [
-  { id: 'p1', name: 'Phase 1', focus: 'Hypertrophy', days: ['u1', 'd1', 'u2', 'd2'] }
+  { id: 'p1', name: 'Phase 1', focus: 'Hypertrophy', days: ['u1', 'd1', 'u2', 'd2'] },
+  { id: 'p2', name: 'Phase 2', focus: 'Lower body', days: ['p2s1', 'p2s2'] }
 ];
 var DAYS = []; PHASES.forEach(function(ph){ DAYS.push.apply(DAYS, ph.days); });
 function currentPhase(){ return PHASES[PHASES.length - 1]; }
@@ -443,6 +444,26 @@ var PROGRAM = {
     { no:'4A', id:'sl-elev-plank',  name:'Single-Leg Elevated Plank',    reps:'30 sec', sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/QfU2iZFeN-M', hold:30 },
     { no:'4B', id:'hip-flexion-hold',name:'Hip Flexion Hold (high plank)',reps:'30 sec',sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/_3rx49bDWgY', hold:30 },
     { no:'4C', id:'suitcase-carry', name:'Suitcase Carry',               reps:'15 m',   sets:2, tempo:'',      rir:'',    rest:60,  url:'https://youtube.com/shorts/iTjwbts8Djw' }
+  ]},
+  /* Phase 2, Lower body, from "lower sk (1).xlsx" sent from Settings on 10 Nov 2026 (Sandeep chose to build from it).
+     The sheet has no warm-up, so the Phase 1 lower warm-up is used. All exercises reuse Phase 1 ids and videos. */
+  p2s1: { label: 'Session 1', name: 'Lower 1', warmup: 'Skipping x 100, cat-camel x 10, lateral hip rocker x 10, couch stretch x 10 each, supine hamstring / leg extension x 10 each, hip 90-90 get-up, single-leg glute bridge 5 sec x 10 each, single-leg wall sit 30 sec x 2 each, elbow plank 1 min', items: [
+    { no:'1',  id:'goblet-squat',    name:'DB Goblet Squat',              reps:'8',      sets:3, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/K2TumOeks2A' },
+    { no:'2',  id:'db-rdl',          name:'DB Romanian Deadlift',         reps:'8',      sets:3, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/CBOhr6H7BEY' },
+    { no:'3',  id:'cossack-squat',   name:'Cossack Squat',                reps:'8',      sets:3, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/XvJ8gtW30ZA' },
+    { no:'4',  id:'sl-smith-calf',   name:'Single-Leg Smith Calf Raise',  reps:'10',     sets:2, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/GoNhkc7ZVVc' },
+    { no:'5',  id:'sl-glute-bridge', name:'Single-Leg Glute Bridge',      reps:'10',     sets:2, tempo:'',    rir:'', rest:60,  url:'https://youtube.com/shorts/RNMIy5Q5XBY' },
+    { no:'6A', id:'copenhagen-plank',name:'Copenhagen Plank',             reps:'30 sec', sets:2, tempo:'',    rir:'', rest:120, url:'https://youtube.com/shorts/Ua7YHHOWRlA', hold:30 },
+    { no:'6B', id:'farmers-carry',   name:'Farmers Carry',                reps:'8',      sets:2, tempo:'',    rir:'', rest:120, url:'https://youtube.com/shorts/Ozp9nI_w4xo' }
+  ]},
+  p2s2: { label: 'Session 2', name: 'Lower 2', warmup: 'Skipping x 100, cat-camel x 10, lateral hip rocker x 10, couch stretch x 10 each, supine hamstring / leg extension x 10 each, hip 90-90 get-up, single-leg glute bridge 5 sec x 10 each, single-leg wall sit 30 sec x 2 each, elbow plank 1 min', items: [
+    { no:'1',  id:'sl-hip-thrust',   name:'DB Single-Leg Hip Thrust',     reps:'8',      sets:3, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/bRZeB6UG6Js' },
+    { no:'2',  id:'split-squat',     name:'DB Split Squat',               reps:'8',      sets:3, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/sw4MzpC8l58' },
+    { no:'3',  id:'ham-curl',        name:'Machine Hamstring Curl',       reps:'8',      sets:3, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/kYx9uchpwVo' },
+    { no:'4',  id:'sl-seated-calf',  name:'Single-Leg Seated Calf Raise', reps:'10',     sets:2, tempo:'311', rir:'', rest:60,  url:'https://youtube.com/shorts/0T0LtUAqPmU' },
+    { no:'5A', id:'sl-elev-plank',   name:'Single-Leg Elevated Plank',    reps:'30 sec', sets:2, tempo:'',    rir:'', rest:120, url:'https://youtube.com/shorts/QfU2iZFeN-M', hold:30 },
+    { no:'5B', id:'wall-leg-lower',  name:'Wall Press Leg Lower',         reps:'8 each', sets:2, tempo:'',    rir:'', rest:120, url:'https://youtu.be/XsdtPDgfRM4' },
+    { no:'5C', id:'suitcase-carry',  name:'Suitcase Carry',               reps:'15 m',   sets:2, tempo:'',    rir:'', rest:120, url:'https://youtube.com/shorts/iTjwbts8Djw' }
   ]}
 };
 var SUPERSET_REST = 120;   // after each superset round
@@ -504,7 +525,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '25';
+var APP_VERSION = '26';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -736,7 +757,7 @@ function lastFor(exId){
 }
 function lastLine(exId){
   var l = lastFor(exId); if (!l) return '<div class="ref">No previous weights yet</div>';
-  return '<div class="ref">Last time, ' + fmtDate(l.rec.started) + ' (' + PROGRAM[l.rec.day].label + '): <b>' +
+  return '<div class="ref">Last time, ' + fmtDate(l.rec.started) + ' (' + PROGRAM[l.rec.day].name + '): <b>' +
     l.sets.map(function(x){ return x.kg === '' || x.kg == null ? 'BW' : x.kg; }).join(' / ') + ' kg</b></div>';
 }
 function planVal(dk, exId, i, f){
