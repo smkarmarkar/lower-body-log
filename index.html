@@ -265,6 +265,10 @@ a{color:var(--ink);text-underline-offset:4px}
 .daycard ol{font-size:15px;gap:6px}
 .daycard li b,.hlist li b{font-family:var(--font-body);font-weight:600;font-size:16px;min-width:30px;color:var(--soft);font-variant-numeric:tabular-nums}
 .banner{background:var(--primary);color:var(--primary-foreground);border-radius:var(--r-lg);box-shadow:var(--shadow-sm)}
+/* a card that opens another screen */
+.navcard{flex-direction:row;align-items:center;justify-content:space-between;text-align:left;width:100%;cursor:pointer;font:inherit;color:inherit}
+.navcard:hover{background:color-mix(in srgb,var(--muted) 50%,var(--card))}
+.chev{flex:none;width:8px;height:8px;margin-right:4px;border-right:2px solid var(--soft);border-bottom:2px solid var(--soft);transform:rotate(-45deg)}
 /* swipe-to-delete tile */
 .swipe{position:relative;border-radius:var(--r-lg);overflow:hidden;background:var(--destructive);flex:none}
 .swdel{position:absolute;top:0;right:0;bottom:0;width:96px;border:0;background:transparent;color:#fff;font:600 15px var(--font-body);cursor:pointer}
@@ -474,7 +478,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '18';
+var APP_VERSION = '19';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -883,7 +887,7 @@ function entryLine(x, r, act){
 
 function viewHome(){
   var h = '<div class="top"><div><div class="eyebrow">Phase 1 · Hypertrophy</div><h1>Strength Tracker</h1></div><div class="topright">' + refreshBtn() + '</div></div>' +
-    '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="history">History</button><button class="link" data-act="feedback">Feedback</button><button class="link" data-act="settings">Settings</button></div>';
+    '<div class="row" style="gap:4px;margin-top:-10px"><button class="link" data-act="settings">Settings</button></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
     // tap to resume; slide left to reveal Delete
@@ -1034,10 +1038,10 @@ function viewSummary(){
     }).join('') + '<button class="btn" data-act="edit" style="align-self:flex-start">Edit weights</button></div>';
   }
   if (fromHist && rec.archived){
-    h += '<div class="callout">This workout is in the archive. It stays in your backup but is hidden from History and from your last-time weights.</div>' +
+    h += '<div class="callout">This workout is in the archive. It stays in your backup but is hidden from Monthly progress and from your last-time weights.</div>' +
       '<button class="btn" data-act="unarchive">Restore to history</button>';
   } else if (fromHist){
-    h += S.confirmDel ? '<div class="card confirm"><b>Move this workout to the archive?</b><span class="muted">It disappears from History and from your last-time weights, but stays in your backup. You can restore it from the archive.</span><div class="row"><button class="btn danger" data-act="delrec">Move to archive</button><button class="btn" data-act="nodel">Keep it</button></div></div>'
+    h += S.confirmDel ? '<div class="card confirm"><b>Move this workout to the archive?</b><span class="muted">It disappears from Monthly progress and from your last-time weights, but stays in your backup. You can restore it from the archive.</span><div class="row"><button class="btn danger" data-act="delrec">Move to archive</button><button class="btn" data-act="nodel">Keep it</button></div></div>'
       : '<button class="link" data-act="askdel" style="color:var(--danger);align-self:center">Move to archive</button>';
   } else h += '<button class="btn block" data-act="home" style="margin-bottom:16px">Done</button>';
   return h;
@@ -1048,7 +1052,7 @@ function histRow(rec){
     '<span class="muted num" style="font-size:14px;text-align:right">' + setCount(rec) + ' sets<br>' + volume(rec).toLocaleString() + ' kg</span></button>';
 }
 function viewHistory(){
-  var h = topBar('History', 'home'), arch = archivedHist();
+  var h = topBar('Monthly progress', 'settings'), arch = archivedHist();
   var archBlock = !arch.length ? '' : '<button class="link" data-act="togglearch" style="align-self:center">' + (S.showArch ? 'Hide' : 'Show') + ' archive (' + arch.length + ')</button>' +
     (S.showArch ? '<div class="eyebrow">Archive</div>' + arch.map(histRow).join('') : '');
   if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a session and it shows up here with its weights and times.</span></div>' + archBlock;
@@ -1131,11 +1135,15 @@ function ctxNow(){
   return c;
 }
 function ctxText(c){
-  var v = { home: 'Home', day: 'Exercise list', exedit: 'Edit exercise', focus: 'Workout', summary: 'Summary', history: 'History', settings: 'Settings' }[c.view] || c.view;
+  var v = { home: 'Home', day: 'Exercise list', exedit: 'Edit exercise', focus: 'Workout', summary: 'Summary', history: 'Monthly progress', settings: 'Settings' }[c.view] || c.view;
   return [v, c.workout, c.exercise, c.set ? 'set ' + c.set : '', c.phase].filter(Boolean).join(' · ');
 }
 function viewSettings(){
   var h = topBar('Settings', 'home', refreshBtn()), th = lsGet('lbl.theme', 'system');
+  var nActive = {}; hist().forEach(function(r){ if (dayKey(r.started).slice(0, 7) === dayKey(new Date()).slice(0, 7)) nActive[dayKey(r.started)] = 1; });
+  var nA = Object.keys(nActive).length;
+  h += '<button class="card navcard" data-act="history"><span><h3>Monthly progress</h3><span class="muted" style="font-size:14px">' + nA + (nA === 1 ? ' active day' : ' active days') + ' this month · calendar and every workout</span></span>' +
+    '<span class="chev" aria-hidden="true"></span></button>';
   h += '<section class="card"><div><h3>Appearance</h3><span class="muted" style="font-size:14px">System follows your phone\'s light or dark setting.</span></div>' +
     '<div class="seg" role="group" aria-label="Theme">' + [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(function(x){
       return '<button data-act="theme" data-t="' + x[0] + '" aria-pressed="' + (th === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></section>';
