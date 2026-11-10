@@ -57,7 +57,7 @@ h1{font-size:34px;line-height:1.05}
 h2{font-size:26px;line-height:1.1}
 h3{font-size:21px;line-height:1.15}
 .muted{color:var(--soft)}
-.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.eyebrow{font-size:12px;font-weight:600;color:var(--soft)}
 .num{font-variant-numeric:tabular-nums}
 a{color:var(--accent)}
 button{font:inherit;color:inherit}
@@ -221,7 +221,7 @@ button{font:inherit;color:inherit}
 .st-done,.st-wontfix{color:var(--soft)}
 .ntext{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 .thread{display:flex;flex-direction:column;gap:6px;border-left:3px solid var(--line);padding-left:10px}
-.thread .by{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--soft)}
+.thread .by{font-size:12px;font-weight:700;color:var(--soft)}
 .thread .claude .by{color:var(--accent)}
 .nactions{display:flex;gap:8px;flex-wrap:wrap}
 .nactions .btn{min-height:42px;font-size:15px;padding:0 16px}
@@ -269,7 +269,7 @@ a{color:var(--ink);text-underline-offset:4px}
 .apptitle{display:flex;align-items:center;gap:10px;font-size:clamp(22px,6.6vw,30px);line-height:1.1;font-weight:700;letter-spacing:-.03em;color:var(--ink);min-width:0;white-space:nowrap}
 .apptitle img{flex:none;width:40px;height:40px;border-radius:10px}
 .phase{font-size:20px;line-height:1.2;margin-top:-4px;color:var(--soft)}
-.seclabel{text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:-8px}
+.seclabel{font-size:14px;font-weight:600;margin-bottom:-8px}
 .sessions{padding:0;gap:0;overflow:hidden}
 .sess+.sess{border-top:1px solid var(--line)}
 .sess summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;font-size:15.5px}
@@ -352,7 +352,7 @@ a{color:var(--ink);text-underline-offset:4px}
 .ring .bgc{stroke:var(--muted)}
 .ring b{font:600 26px var(--font-body);letter-spacing:-.03em}
 .ring.big b{font-size:min(26vw,19vh);letter-spacing:-.05em}
-.restov .eyebrow{font-size:14px;letter-spacing:.12em;text-transform:uppercase}
+.restov .eyebrow{font-size:15px}
 .ovnext{font-size:17px;font-weight:500}
 
 /* Dock and Sonner toast */
@@ -363,7 +363,7 @@ a{color:var(--ink);text-underline-offset:4px}
 .video{border-radius:var(--r-lg)}
 /* Activity card (History): one month, Monday to Sunday rows */
 .act{gap:12px}
-.act .eyebrow{text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--ink)}
+.act .eyebrow{font-weight:600;color:var(--ink)}
 .actcount{display:flex;align-items:baseline;gap:8px;margin:-4px 0 2px}
 .actcount b{font-size:64px;line-height:1;font-weight:700;letter-spacing:-.05em}
 .actcount span{font-size:17px;font-weight:500;color:var(--soft)}
@@ -400,7 +400,7 @@ var PROGRAM_REV = 3;   // bump when the program below changes, so old in-app edi
    Reuse an exercise's id when it appears again, so its last-time weights carry over. */
 var PHASES = [
   { id: 'p1', name: 'Phase 1', focus: 'Hypertrophy', days: ['u1', 'd1', 'u2', 'd2'] },
-  { id: 'p2', name: 'Phase 2', focus: 'Lower body', days: ['p2s1', 'p2s2'] }
+  { id: 'p2', name: 'Phase 2', focus: 'Lower Body', days: ['p2s1', 'p2s2'] }
 ];
 var DAYS = []; PHASES.forEach(function(ph){ DAYS.push.apply(DAYS, ph.days); });
 /* Phases removed in Settings are hidden, not deleted (PHASEHIDE, synced as phases.json). The first phase can't be removed. */
@@ -528,7 +528,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '27';
+var APP_VERSION = '28';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -950,7 +950,7 @@ function holdBlock(it){
     : left <= 0 ? '<button class="btn" data-act="hold">Again</button>'
     : '<button class="btn primary" data-act="hold">' + (left < total ? 'Resume' : 'Start ' + total + 's') + '</button>';
   return '<div class="hold"><div class="ring"><svg viewBox="0 0 100 100"><circle class="bgc" cx="50" cy="50" r="44"/><circle id="hring" class="fg" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="' + (276.5 * (1 - left / total)).toFixed(1) + '"/></svg><b id="htime">' + fmtSec(left) + '</b></div>' +
-    '<div class="info"><div class="eyebrow">' + (left <= 0 ? 'Hold done' : run ? 'Holding' : 'Hold timer') + '</div><div class="row">' + btn +
+    '<div class="info"><div class="eyebrow">' + (left <= 0 ? 'Hold Done' : run ? 'Holding' : 'Hold Timer') + '</div><div class="row">' + btn +
     (W.hold ? '<button class="btn" data-act="holdreset">Reset</button>' : '') + '</div></div></div>';
 }
 // one line per exercise: set pills (tap to pick a set), reps, kg
@@ -973,13 +973,13 @@ function viewHome(){
   var h = '<div class="top"><span class="apptitle"><img src="icon-180.png" alt="" width="40" height="40">Strength Tracker</span><div class="topright">' + refreshBtn() + '<button class="iconbtn" data-act="settings" aria-label="Settings">' + ICON.gear + '</button></div></div>' +
     '<h1 class="phase">' + esc(shownPhase().name) + '</h1>';
   if (livePhases().length > 1) h += '<div class="seg" role="group" aria-label="Phase">' + livePhases().map(function(ph){
-    return '<button data-act="homephase" data-p="' + ph.id + '" aria-pressed="' + (ph.id === shownPhase().id) + '">' + esc(ph.name) + (ph === currentPhase() ? ' · current' : '') + '</button>'; }).join('') + '</div>';
+    return '<button data-act="homephase" data-p="' + ph.id + '" aria-pressed="' + (ph.id === shownPhase().id) + '">' + esc(ph.name) + (ph === currentPhase() ? ' · Current' : '') + '</button>'; }).join('') + '</div>';
   if (shownPhase() !== currentPhase()) h += '<div class="callout">A previous phase. You can still open and log its sessions. <button class="link" data-act="homephase" data-p="' + currentPhase().id + '" style="padding:0">Back to ' + esc(currentPhase().name) + '</button></div>';
   if (W){
     var it = exById(stepsOf()[W.cur].ex);
     // tap to resume; slide left to reveal Delete
     h += '<div class="swipe"><button class="swdel" data-act="wipdel" aria-label="Delete the workout in progress">Delete</button>' +
-      '<button class="banner swfront" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' in progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button></div>';
+      '<button class="banner swfront" data-act="resume"><span><span class="eyebrow" style="color:inherit;opacity:.8">' + PROGRAM[W.day].name + ' In Progress</span><br><b>' + esc(it.no + '. ' + it.name) + '</b></span><b>Resume</b></button></div>';
   }
   // one collapsed row per session; tap to see its details, then Open to start
   h += '<div class="eyebrow seclabel">' + esc(shownPhase().focus) + '</div><section class="card sessions">' + shownPhase().days.map(function(dk){
@@ -999,7 +999,7 @@ function viewDay(){
   h += '<div class="muted" style="text-align:center;margin-top:-8px">' + p.label + ' · ' + p.items.length + ' exercises · about ' + estMinutes(dk) + ' min</div>';
   if (ed) h += '<div class="callout">Add, edit or delete exercises and sets. Changes apply to your next workouts; past workouts keep what you did.</div>';
   // stays the way you left it (open by default)
-  if (p.warmup && !ed) h += '<details class="card warm"' + (lsGet('lbl.warmopen', true) ? ' open' : '') + '><summary><b>Warm up + activation</b></summary><span class="muted">' + esc(p.warmup) + '</span></details>';
+  if (p.warmup && !ed) h += '<details class="card warm"' + (lsGet('lbl.warmopen', true) ? ' open' : '') + '><summary><b>Warm Up + Activation</b></summary><span class="muted">' + esc(p.warmup) + '</span></details>';
   if (!p.items.length) h += '<div class="card"><span class="muted">No exercises in this day. Tap Edit, then Add exercise.</span></div>';
   blocks(dk).forEach(function(b){
     var inner = b.items.map(function(it, k){
@@ -1032,7 +1032,7 @@ function viewDay(){
 function viewExEdit(){
   var f = S.exf, d = f.draft;
   var fld = function(id, label, val, attrs){ return '<label class="fl"><span>' + label + '</span><input id="xf-' + id + '" class="field" value="' + esc(val == null ? '' : val) + '"' + (attrs || '') + '></label>'; };
-  var h = topBar(f.id ? 'Edit exercise' : 'Add exercise', 'backday');
+  var h = topBar(f.id ? 'Edit Exercise' : 'Add Exercise', 'backday');
   h += '<div class="muted" style="text-align:center;margin-top:-8px">' + esc(PROGRAM[f.dk].name) + '</div>';
   h += '<section class="card">' +
     '<div class="two">' + fld('no', 'Number', d.no, ' autocapitalize="characters" placeholder="3 or 5A"') + fld('sets', 'Sets', d.sets, ' inputmode="numeric"') + '</div>' +
@@ -1108,7 +1108,7 @@ function viewFocus(){
 
 function viewSummary(){
   var rec = S.rec, p = PROGRAM[rec.day], fromHist = S.fromHist;
-  var h = topBar(fromHist ? p.name : 'Workout done', fromHist ? 'history' : 'home');
+  var h = topBar(fromHist ? p.name : 'Workout Done', fromHist ? 'history' : 'home');
   h += '<div class="muted" style="text-align:center;margin-top:-8px">' + fmtDate(rec.started) + ' · ' + fmtTime(rec.started) + ' to ' + fmtTime(rec.ended) + '</div>';
   if (!Object.keys(rec.sets).length) return h + '<div class="card">No sets were marked done, so nothing was saved.</div><button class="btn block" data-act="home">Back to start</button>';
   h += '<div class="stats"><div class="stat"><b>' + mins(rec) + '</b><span>minutes</span></div><div class="stat"><b>' + setCount(rec) + '</b><span>sets</span></div><div class="stat"><b>' + volume(rec).toLocaleString() + '</b><span>kg volume</span></div></div>';
@@ -1118,7 +1118,7 @@ function viewSummary(){
     '<div class="row"><button class="btn primary" data-act="copy">Copy for Strava</button>' + (DL || !IN_ARTIFACT ? '<button class="btn" data-act="csv">Download CSV</button>' : '') + '</div></div>';
   var doneIt = recItems(rec);
   if (S.editing){
-    h += '<div class="card"><div><h3>Edit weights</h3><span class="muted" style="font-size:14px">' + esc(PROGRAM[rec.day].label + ', ' + fmtDate(rec.started)) + '</span></div>' + doneIt.map(function(it){
+    h += '<div class="card"><div><h3>Edit Weights</h3><span class="muted" style="font-size:14px">' + esc(PROGRAM[rec.day].label + ', ' + fmtDate(rec.started)) + '</span></div>' + doneIt.map(function(it){
       return '<div class="ex"><b>' + it.no + '. ' + esc(it.name) + '</b>' + setGrid(rec.sets[it.id].map(function(x, i){ return { i: i, scope: 'h', ex: it.id, reps: x.reps, kg: x.kg, status: fmtTime(x.at) }; })) + '</div>';
     }).join('<div class="divider"></div>') + '<div class="row"><button class="btn primary" data-act="editsave">Save changes</button><button class="btn" data-act="editcancel">Cancel</button></div></div>';
   } else {
@@ -1127,10 +1127,10 @@ function viewSummary(){
     }).join('') + '<button class="btn" data-act="edit" style="align-self:flex-start">Edit weights</button></div>';
   }
   if (fromHist && rec.archived){
-    h += '<div class="callout">This workout is in the archive. It stays in your backup but is hidden from Monthly progress and from your last-time weights.</div>' +
+    h += '<div class="callout">This workout is in the archive. It stays in your backup but is hidden from Monthly Progress and from your last-time weights.</div>' +
       '<button class="btn" data-act="unarchive">Restore to history</button>';
   } else if (fromHist){
-    h += S.confirmDel ? '<div class="card confirm"><b>Move this workout to the archive?</b><span class="muted">It disappears from Monthly progress and from your last-time weights, but stays in your backup. You can restore it from the archive.</span><div class="row"><button class="btn danger" data-act="delrec">Move to archive</button><button class="btn" data-act="nodel">Keep it</button></div></div>'
+    h += S.confirmDel ? '<div class="card confirm"><b>Move this workout to the archive?</b><span class="muted">It disappears from Monthly Progress and from your last-time weights, but stays in your backup. You can restore it from the archive.</span><div class="row"><button class="btn danger" data-act="delrec">Move to archive</button><button class="btn" data-act="nodel">Keep it</button></div></div>'
       : '<button class="link" data-act="askdel" style="color:var(--danger);align-self:center">Move to archive</button>';
   } else h += '<button class="btn block" data-act="home" style="margin-bottom:16px">Done</button>';
   return h;
@@ -1141,7 +1141,7 @@ function histRow(rec){
     '<span class="muted num" style="font-size:14px;text-align:right">' + setCount(rec) + ' sets<br>' + volume(rec).toLocaleString() + ' kg</span></button>';
 }
 function viewHistory(){
-  var h = topBar('Monthly progress', 'settings'), arch = archivedHist();
+  var h = topBar('Monthly Progress', 'settings'), arch = archivedHist();
   var archBlock = !arch.length ? '' : '<button class="link" data-act="togglearch" style="align-self:center">' + (S.showArch ? 'Hide' : 'Show') + ' archive (' + arch.length + ')</button>' +
     (S.showArch ? '<div class="eyebrow">Archive</div>' + arch.map(histRow).join('') : '');
   if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a session and it shows up here with its weights and times.</span></div>' + archBlock;
@@ -1149,7 +1149,7 @@ function viewHistory(){
   // grouped by date, newest first; each workout lists every exercise with its reps and weights.
   // A day picked on the activity card shows only that day.
   var list = S.histDay ? hist().filter(function(r){ return dayKey(r.started) === S.histDay; }) : hist();
-  if (S.histDay) h += '<div class="exrow"><span class="eyebrow">Showing one day</span><button class="link" data-act="histall">Show all workouts</button></div>';
+  if (S.histDay) h += '<div class="exrow"><span class="eyebrow">Showing One Day</span><button class="link" data-act="histall">Show all workouts</button></div>';
   var lastDate = '';
   list.forEach(function(rec){
     var d = fmtDate(rec.started);
@@ -1175,8 +1175,8 @@ function activityCard(){
   for (var i = 0; i < 7; i++){ var wd = new Date(wk); wd.setDate(wk.getDate() + i); if (active[dayKey(wd)]) wkCount++; }
   var monthCount = Object.keys(active).filter(function(k){ return k.slice(0, 7) === mk; }).length;
   var monthLabel = new Date(y, m, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  var wkLabel = S.histDay ? 'week of ' + wk.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'this week';
-  var h = '<section class="card act"><div class="eyebrow">Active days ' + esc(wkLabel) + '</div>' +
+  var wkLabel = S.histDay ? 'Week of ' + wk.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : 'This Week';
+  var h = '<section class="card act"><div class="eyebrow">Active Days ' + esc(wkLabel) + '</div>' +
     '<div class="actcount"><b class="num">' + wkCount + '</b><span>of 7 days</span></div>' +
     '<div class="calnav"><button class="iconbtn" data-act="histmonth" data-d="-1" aria-label="Previous month"' + (mk <= first ? ' disabled' : '') + '>' + ICON.back + '</button>' +
     '<div><b>' + esc(monthLabel) + '</b><br><span class="muted">' + monthCount + (monthCount === 1 ? ' active day' : ' active days') + '</span></div>' +
@@ -1231,7 +1231,7 @@ function viewSettings(){
   var h = topBar('Settings', 'home', refreshBtn()), th = lsGet('lbl.theme', 'system');
   var nActive = {}; hist().forEach(function(r){ if (dayKey(r.started).slice(0, 7) === dayKey(new Date()).slice(0, 7)) nActive[dayKey(r.started)] = 1; });
   var nA = Object.keys(nActive).length;
-  h += '<button class="card navcard" data-act="history"><span><h3>Monthly progress</h3><span class="muted" style="font-size:14px">' + nA + (nA === 1 ? ' active day' : ' active days') + ' this month · calendar and every workout</span></span>' +
+  h += '<button class="card navcard" data-act="history"><span><h3>Monthly Progress</h3><span class="muted" style="font-size:14px">' + nA + (nA === 1 ? ' active day' : ' active days') + ' this month · calendar and every workout</span></span>' +
     '<span class="chev" aria-hidden="true"></span></button>';
   h += '<section class="card"><div><h3>Appearance</h3><span class="muted" style="font-size:14px">System follows your phone\'s light or dark setting.</span></div>' +
     '<div class="seg" role="group" aria-label="Theme">' + [['system', 'System'], ['light', 'Light'], ['dark', 'Dark']].map(function(x){
@@ -1256,7 +1256,7 @@ function viewSettings(){
       '<span class="ref">Sent ' + fmtDate(q.at) + ' ' + fmtTime(q.at) + (q.note ? ' · note: ' + esc(q.note) : '') + '</span>' + (q.reply ? '<div class="callout">' + esc(q.reply) + '</div>' : '') + acts + '</div>';
   }).join('');
   // Your phases: remove (hide) or restore any phase after the first
-  if (PHASES.length > 1) h += '<section class="card"><div><h3>Your phases</h3><span class="muted" style="font-size:14px">To tweak an exercise, open its session and tap Edit. If a phase didn\'t come out right, remove it here or ask Claude to fix it below.</span></div>' +
+  if (PHASES.length > 1) h += '<section class="card"><div><h3>Your Phases</h3><span class="muted" style="font-size:14px">To tweak an exercise, open its session and tap Edit. If a phase didn\'t come out right, remove it here or ask Claude to fix it below.</span></div>' +
     PHASES.map(function(ph, i){
       var hid = phaseHidden(ph), chip = hid ? 'Removed' : ph === currentPhase() ? 'Current' : '';
       var act = i === 0 ? '' : hid ? '<button class="btn" data-act="phaseshow" data-p="' + ph.id + '">Restore</button>'
@@ -1265,7 +1265,7 @@ function viewSettings(){
       return '<div class="preq"><div class="nhead"><b>' + esc(ph.name) + '</b>' + (chip ? '<span class="chip' + (chip === 'Current' ? ' st-fixed' : '') + '">' + chip + '</span>' : '') + '</div>' +
         '<span class="ref">' + esc(ph.focus) + ' · ' + ph.days.length + ' sessions' + (hid ? ' · hidden from Home, workouts kept' : '') + '</span>' + act + '</div>';
     }).join('') + '</section>';
-  h += '<section class="card"><div><h3>New phase</h3><span class="muted" style="font-size:14px">Upload your coach\'s PDF or Excel sheet. Claude reads it and builds ' + esc('Phase ' + (PHASES.length + 1)) + ' like ' + esc(currentPhase().name) + ': sessions, supersets, tempo, rest, warm-ups and a video for every exercise. It becomes your current phase; earlier phases stay on Home.</span></div>' +
+  h += '<section class="card"><div><h3>New Phase</h3><span class="muted" style="font-size:14px">Upload your coach\'s PDF or Excel sheet. Claude reads it and builds ' + esc('Phase ' + (PHASES.length + 1)) + ' like ' + esc(currentPhase().name) + ': sessions, supersets, tempo, rest, warm-ups and a video for every exercise. It becomes your current phase; earlier phases stay on Home.</span></div>' +
     (TOKEN ? '<input id="phasepdf" class="field" type="file" accept="application/pdf,.pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx" aria-label="Workout PDF or Excel file">' +
       '<label class="fl"><span>Notes for Claude (optional)</span><textarea id="phasenote" class="field" placeholder="e.g. Ignore the sets column. Session 3 is optional. Rest 90s on lower days."></textarea></label>' +
       '<button class="btn primary block" data-act="phasesend"' + (S.phaseBusy ? ' disabled' : '') + '>' + (S.phaseBusy ? 'Sending…' : 'Send to Claude') + '</button>' +
