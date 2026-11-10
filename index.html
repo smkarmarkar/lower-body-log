@@ -495,7 +495,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '22';
+var APP_VERSION = '23';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -650,7 +650,7 @@ function syncText(){
   if (SYNC.state === 'syncing') return 'Syncing…';
   if (SYNC.state === 'auth') return 'GitHub refused the token. Check it in Settings.';
   if (SYNC.state === 'offline') return 'Offline. Saved on this phone, will sync later.';
-  if (SYNC.at) return 'Backed up to your Gist at ' + fmtTime(SYNC.at);
+  if (SYNC.at) return 'Updated as on ' + fmtTime(SYNC.at) + ' of ' + new Date(SYNC.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
   return 'Backup to your Gist is on';
 }
 function updSync(){ var e = $('syncnote'); if (e){ e.textContent = syncText(); e.className = 'note sync' + (SYNC.state === 'auth' || SYNC.state === 'offline' ? ' bad' : ''); } }
