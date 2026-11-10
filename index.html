@@ -332,6 +332,23 @@ a{color:var(--ink);text-underline-offset:4px}
 .thread .claude .by{color:var(--ink)}
 .vlink{border-radius:var(--r-lg)}
 .video{border-radius:var(--r-lg)}
+/* Activity card (History) */
+.act{gap:12px}
+.act .eyebrow{text-transform:uppercase;letter-spacing:.08em;font-weight:600;color:var(--ink)}
+.actcount{display:flex;align-items:baseline;gap:8px;margin:-4px 0 6px}
+.actcount b{font-size:64px;line-height:1;font-weight:700;letter-spacing:-.05em}
+.actcount span{font-size:18px;font-weight:500}
+.actrow{display:flex;gap:12px;align-items:flex-start}
+.actm{flex:none;width:36px;font-size:13px;font-weight:600;color:var(--soft);text-transform:uppercase;line-height:16px;padding-top:1px}
+.actm.cur{color:var(--ink)}
+.dots{flex:1;min-width:0;display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:6px 5px;justify-items:center}
+.dot{width:100%;max-width:18px;aspect-ratio:1;border-radius:50%;padding:0;border:0;display:block}
+.dot.off{background:var(--muted)}
+.dot.future{background:transparent;box-shadow:inset 0 0 0 1.5px var(--line)}
+.dot.on{background:var(--chart-1);cursor:pointer}
+.dot.today{box-shadow:inset 0 0 0 1.5px var(--soft)}
+.dot.on.today{box-shadow:none}
+.dot.sel{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--chart-1)}
 /* ===================== /shadcn/ui ===================== */
 @media (max-width:360px){.card{padding:14px}.sets input{font-size:18px;padding:0 8px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -448,7 +465,7 @@ function saveExForm(){
   sortItems(items); saveProg(); return '';
 }
 
-var APP_VERSION = '13';
+var APP_VERSION = '14';
 /* Secret Gist that holds history.json and feedback.json. The app finds (or creates) it with the phone's token,
    so its id never appears in this public page. */
 var GIST_DESC = 'Lower Body Log private data';
@@ -1016,9 +1033,13 @@ function viewHistory(){
   var archBlock = !arch.length ? '' : '<button class="link" data-act="togglearch" style="align-self:center">' + (S.showArch ? 'Hide' : 'Show') + ' archive (' + arch.length + ')</button>' +
     (S.showArch ? '<div class="eyebrow">Archive</div>' + arch.map(histRow).join('') : '');
   if (!hist().length) return h + '<div class="card"><b>No workouts yet</b><span class="muted">Finish a session and it shows up here with its weights and times.</span></div>' + archBlock;
-  // grouped by date, newest first; each workout lists every exercise with its reps and weights
+  h += activityCard();
+  // grouped by date, newest first; each workout lists every exercise with its reps and weights.
+  // A day picked on the activity card shows only that day.
+  var list = S.histDay ? hist().filter(function(r){ return dayKey(r.started) === S.histDay; }) : hist();
+  if (S.histDay) h += '<div class="exrow"><span class="eyebrow">Showing one day</span><button class="link" data-act="histall">Show all workouts</button></div>';
   var lastDate = '';
-  hist().forEach(function(rec){
+  list.forEach(function(rec){
     var d = fmtDate(rec.started);
     if (d !== lastDate){ h += '<h3 class="hdate">' + esc(d) + '</h3>'; lastDate = d; }
     h += '<section class="card hcard"><button class="hist" data-act="open" data-id="' + rec.id + '"><span><b>' + PROGRAM[rec.day].name + '</b> <span class="muted">' + PROGRAM[rec.day].label + '</span><br><span class="muted" style="font-size:14px">' + fmtTime(rec.started) + ' to ' + fmtTime(rec.ended) + ' · ' + mins(rec) + ' min</span></span>' +
@@ -1027,6 +1048,31 @@ function viewHistory(){
       '<button class="link" data-act="open" data-id="' + rec.id + '" style="align-self:flex-start;padding-left:0">Edit, copy for Strava or archive</button></section>';
   });
   return h + archBlock + '<div class="note" id="syncnote">' + esc(syncText()) + '</div>';
+}
+function dayKey(t){ var d = new Date(t); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+// Activity card: one dot per day for the last 4 months; orange = a strength session that day.
+function activityCard(){
+  var active = {}; hist().forEach(function(r){ active[dayKey(r.started)] = true; });
+  var now = new Date(), today = dayKey(now), focus = S.histDay ? new Date(S.histDay + 'T12:00') : now;
+  var fy = focus.getFullYear(), fm = focus.getMonth(), count = 0;
+  Object.keys(active).forEach(function(k){ var d = new Date(k + 'T12:00'); if (d.getFullYear() === fy && d.getMonth() === fm) count++; });
+  var monthName = function(y, m, opt){ return new Date(y, m, 1).toLocaleDateString(undefined, { month: opt }); };
+  var h = '<section class="card act"><div class="eyebrow">Active days in ' + esc(monthName(fy, fm, 'long')) + '</div>' +
+    '<div class="actcount"><b class="num">' + count + '</b><span>' + (count === 1 ? 'day' : 'days') + '</span></div>';
+  for (var i = 3; i >= 0; i--){
+    var y = now.getFullYear(), m = now.getMonth() - i; if (m < 0){ m += 12; y--; }
+    var n = new Date(y, m + 1, 0).getDate(), dots = '';
+    for (var d = 1; d <= n; d++){
+      var k = y + '-' + pad(m + 1) + '-' + pad(d), cls = active[k] ? 'on' : k > today ? 'future' : 'off';
+      if (k === S.histDay) cls += ' sel';
+      if (k === today) cls += ' today';
+      var label = new Date(y, m, d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      dots += active[k] ? '<button class="dot ' + cls + '" data-act="histday" data-day="' + k + '" aria-label="' + esc(label) + ', strength session"' + (k === S.histDay ? ' aria-pressed="true"' : '') + '></button>'
+        : '<span class="dot ' + cls + '" title="' + esc(label) + '"></span>';
+    }
+    h += '<div class="actrow"><span class="actm' + (y === fy && m === fm ? ' cur' : '') + '">' + esc(monthName(y, m, 'short').slice(0, 3)) + '</span><div class="dots">' + dots + '</div></div>';
+  }
+  return h + '</section>';
 }
 function histDetail(rec){
   return recItems(rec).map(function(it){
@@ -1134,7 +1180,7 @@ document.addEventListener('click', function(e){
   var go = function(v){ S.view = v; S.confirm = false; S.confirmDel = false; S.editing = false; render(); scrollTo(0, 0); };
   switch (a){
     case 'home': unwake(); go('home'); break;
-    case 'history': go('history'); break;
+    case 'history': S.histDay = null; go('history'); break;
     case 'settings': go('settings'); break;
     case 'feedback': if (window.Bugbox) Bugbox.open(); else toast('Feedback is still loading. Try again in a moment.'); break;
     case 'refresh':
@@ -1193,6 +1239,8 @@ document.addEventListener('click', function(e){
     case 'finish': finishWorkout(); break;
     case 'discard': var kept = archiveWorkout(); go('home'); toast(kept ? 'Moved to the archive' : 'Workout discarded, no sets were done'); break;
     case 'togglearch': S.showArch = !S.showArch; render(); break;
+    case 'histday': var hd = el.getAttribute('data-day'); S.histDay = S.histDay === hd ? null : hd; render(); break;
+    case 'histall': S.histDay = null; render(); break;
     case 'unarchive': S.rec.archived = false; S.rec.updated = Date.now(); backend.put(S.rec).catch(function(){}); render(); toast('Restored to history'); break;
     case 'open': S.rec = HIST.filter(function(h){ return h.id === el.getAttribute('data-id'); })[0]; S.fromHist = true; S.saved = ''; go('summary'); break;
     case 'askdel': S.confirmDel = true; render(); break;
